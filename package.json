@@ -1,0 +1,33 @@
+{
+  "name": "papouth-game-launcher",
+  "version": "1.0.0",
+  "description": "Papouth Game Launcher - boutique et bibliothèque de jeux TikTok LIVE",
+  "main": "main.js",
+  "author": "Papouth",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "demo": "cross-env ALIEN_DEMO=1 electron .",
+    "dist": "electron-builder --win nsis --publish never",
+    "release": "electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9",
+    "extract-zip": "^2.0.1",
+    "node-machine-id": "^1.1.12"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.papouth.gamelauncher",
+    "productName": "Papouth Game Launcher",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "config.js", "src/**/*", "renderer/**/*", "assets/**/*", "package.json"],
+    "win": { "target": ["nsis"], "icon": "assets/icon.png" },
+    "nsis": { "shortcutName": "Papouth Game Launcher", "oneClick": false, "allowToChangeInstallationDirectory": true, "perMachine": false, "artifactName": "PapouthGameLauncher-Setup.${ext}" },
+    "publish": [{ "provider": "github", "owner": "Papouth", "repo": "papouth-launcher", "releaseType": "release" }]
+  }
+}

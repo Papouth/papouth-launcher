@@ -1,0 +1,22 @@
+# Fabrique l'installeur Windows et le publie dans les Releases de ce dépôt.
+# Se lance tout seul quand la version change dans package.json (ou à la main : Actions > Run workflow).
+name: Publier le launcher
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [package.json]
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
