@@ -42,5 +42,7 @@ contextBridge.exposeInMainWorld('alien', {
   },
   onProgress: on('games:progress'),
   onGameState: on('games:state'),
+  onAccessChanged: on('access:changed'),
+  onAccessRevoked: on('access:revoked'),
   onUpdate: on('update:status')
 });

@@ -69,6 +69,7 @@
   'err.resume_requires_new_subscription': 'PayPal tidak membenarkan langganan yang dibatalkan diaktifkan semula: sila langgan Game Pass baharu.',
   'acc.devTitle': 'Mod pembangun',
   'toast.ready': '{name} sudah sedia.', 'toast.uninstalled': '{name} telah dinyahpasang.', 'toast.confirmUninstall': 'Nyahpasang {name}?',
+  'access.revokedTitle': 'Akses ditarik balik', 'access.revoked': 'Akses anda kepada {name} telah ditarik balik. Permainan telah ditutup.', 'access.ok': 'OK',
   'toast.launchFail': 'Tidak dapat melancarkan permainan: {error}', 'toast.demoPortal': 'Mod demo: portal tidak tersedia.',
   'toast.paid': 'Pembayaran disahkan, terima kasih! 🎮', 'toast.timeout': 'Masa tamat: pembayaran tidak disahkan. Jika anda telah membayar, buka semula pelancar dalam beberapa minit.',
   'pay.passTitle': 'Game Pass {plan}', 'pay.choose': 'Pilih kaedah pembayaran',

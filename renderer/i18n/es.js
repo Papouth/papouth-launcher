@@ -69,6 +69,7 @@
   'err.resume_requires_new_subscription': 'PayPal no permite reactivar una suscripción cancelada: contrata un nuevo Game Pass.',
   'acc.devTitle': 'Modo desarrollador',
   'toast.ready': '{name} está listo.', 'toast.uninstalled': '{name} desinstalado.', 'toast.confirmUninstall': '¿Desinstalar {name}?',
+  'access.revokedTitle': 'Acceso retirado', 'access.revoked': 'Tu acceso a {name} ha sido retirado. El juego se ha cerrado.', 'access.ok': 'OK',
   'toast.launchFail': 'No se pudo iniciar el juego: {error}', 'toast.demoPortal': 'Modo demo: portal no disponible.',
   'toast.paid': '¡Pago confirmado, gracias! 🎮', 'toast.timeout': 'Tiempo agotado: pago no confirmado. Si ya has pagado, vuelve a abrir el launcher en unos minutos.',
   'pay.passTitle': 'Game Pass {plan}', 'pay.choose': 'Elige un método de pago',

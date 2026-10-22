@@ -8,6 +8,7 @@ const cfg = require('./config');
 const { StoreApi, ApiError } = require('./src/api');
 const installer = require('./src/installer');
 const demo = require('./src/demo');
+const { Realtime } = require('./src/realtime');
 
 let win = null;
 let demoMode = cfg.DEMO;
@@ -15,6 +16,7 @@ let demoAdminCore = null; // faux backend admin en mémoire (mode démo)
 let demoState = { pass: null, owned: [] };
 let session = { user: null };
 const running = new Map(); // slug -> child
+const launchTokens = new Map(); // slug -> jeton de lancement en cours (vérifié par /license/heartbeat)
 const busy = new Set(); // slugs en cours d'installation
 let hwidCache = null;
 
@@ -60,6 +62,49 @@ function handle(channel, fn) {
 const send = (ch, payload) => { if (win && !win.isDestroyed()) win.webContents.send(ch, payload); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// ---------- Révocation instantanée ----------
+// Flux SSE (/events) tant que le joueur est connecté ; repli : sondage de /entitlements toutes les 60 s tant qu'un jeu tourne.
+function killTree(child) {
+  try {
+    const pid = child && child.pid;
+    if (!pid) return;
+    if (process.platform === 'win32') spawn('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }).on('error', () => {});
+    else { try { process.kill(-pid, 'SIGKILL'); } catch (_) { child.kill('SIGKILL'); } }
+  } catch (_) { /* déjà terminé */ }
+}
+let checking = false;
+async function checkAccess() {
+  if (demoMode || !session.user || checking) return;
+  checking = true;
+  try {
+    let ent;
+    try { ent = await api.entitlements(); } catch (e) { return; } // réseau coupé : on ne coupe rien sur une erreur transitoire
+    send('access:changed', ent);
+    for (const [slug, child] of [...running]) {
+      let allowed = Array.isArray(ent.access) && ent.access.includes(slug);
+      if (allowed && launchTokens.has(slug)) { // jeton périmé (ex. changement d'appareil) : le serveur tranche
+        try {
+          const hb = await api.heartbeat(launchTokens.get(slug));
+          if (hb && hb.valid === false) allowed = false;
+          else if (hb && hb.token) launchTokens.set(slug, hb.token);
+        } catch (_) { /* réseau : on garde */ }
+      }
+      if (!allowed) { running.delete(slug); launchTokens.delete(slug); killTree(child); send('games:state', { slug, running: false }); send('access:revoked', { slug }); }
+    }
+  } finally { checking = false; }
+}
+let pollTimer = null;
+function syncPoll() {
+  if (running.size && !pollTimer) pollTimer = setInterval(checkAccess, 60000);
+  else if (!running.size && pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+const realtime = new Realtime({
+  getUrl: apiUrl, getToken: () => api.token,
+  onEvent: (ev) => { if (ev === 'entitlements' || ev === 'revoked') checkAccess(); },
+  onState: (up) => { if (up) checkAccess(); } // (re)connexion : rattrape ce qui a pu être manqué
+});
+const startRealtime = () => { if (!demoMode && api.token) realtime.start(); };
+
 // ---------- Auth ----------
 async function autoLogin() {
   if (demoMode) { session.user = demo.user; return true; }
@@ -69,6 +114,7 @@ async function autoLogin() {
   try {
     const r = await api.me();
     session.user = r.user;
+    startRealtime();
     return true;
   } catch (e) {
     if (e.status === 401 || e.status === 403) { clearToken(); api.setToken(null); }
@@ -96,15 +142,16 @@ async function authDone(r) {
   api.setToken(r.token);
   saveToken(r.token);
   session.user = r.user;
+  startRealtime();
   return { user: r.user };
 }
 handle('auth:login', async ({ email, password }) => authDone(await api.login(email, password)));
 handle('auth:register', async ({ email, password, tiktok }) => authDone(await api.register(email, password, tiktok)));
 handle('auth:logout', async () => {
-  clearToken(); api.setToken(null); session.user = null; demoMode = false;
+  realtime.stop(); clearToken(); api.setToken(null); session.user = null; demoMode = false;
   return true;
 });
-handle('demo:start', async () => { demoMode = true; demoAdminCore = null; demoState = { pass: null, owned: [] }; session.user = demo.user; return { user: demo.user }; });
+handle('demo:start', async () => { realtime.stop(); demoMode = true; demoAdminCore = null; demoState = { pass: null, owned: [] }; session.user = demo.user; return { user: demo.user }; });
 
 // ---------- Mode administrateur ----------
 const isAdmin = () => !!(session.user && session.user.role === 'admin');
@@ -320,10 +367,12 @@ handle('games:play', async (slug) => {
   const exePath = path.join(entry.path, entry.exe);
   if (!fs.existsSync(exePath)) throw new ApiError('missing_exe', "Exécutable introuvable. Réinstallez le jeu.");
   const child = spawn(exePath, ['--alien-token=' + token, '--papouth-token=' + token], { cwd: entry.path, detached: true, stdio: 'ignore', windowsHide: false });
-  child.on('error', (e) => { running.delete(slug); send('games:state', { slug, running: false, error: e.message }); });
-  child.on('exit', () => { running.delete(slug); send('games:state', { slug, running: false }); });
+  launchTokens.set(slug, token);
+  child.on('error', (e) => { running.delete(slug); launchTokens.delete(slug); syncPoll(); send('games:state', { slug, running: false, error: e.message }); });
+  child.on('exit', () => { if (running.get(slug) === child) running.delete(slug); launchTokens.delete(slug); syncPoll(); send('games:state', { slug, running: false }); });
   child.unref();
   running.set(slug, child);
+  syncPoll();
   send('games:state', { slug, running: true });
   return true;
 });

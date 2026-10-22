@@ -184,13 +184,6 @@
           }
           return { ok: true, pass: x.pass, owned: x.owned };
         }
-        case 'POST users :slug role': {
-          const x = users.find((y) => y.id === seg[1]);
-          if (!x) throw err('user_not_found', 'Utilisateur introuvable.');
-          if (x.id === 'u1' && b.role !== 'admin') throw err('cannot_demote_self', 'Vous ne pouvez pas retirer vos propres droits d\'administrateur.');
-          x.role = b.role; audit('user.role', x.email, b.role);
-          return { ok: true, role: x.role };
-        }
         case 'POST users :slug devices :id': {
           const x = users.find((y) => y.id === seg[1]);
           if (!x) throw err('user_not_found', 'Utilisateur introuvable.');

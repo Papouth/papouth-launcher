@@ -489,6 +489,18 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     render();
   });
   A.onGameState((s) => { if (s.running) S.running.add(s.slug); else S.running.delete(s.slug); if (s.error) toast(t('toast.launchFail', { error: s.error }), 'error'); render(); });
+  // Droits modifiés côté serveur (temps réel) : on met à jour sans attendre
+  A.onAccessChanged((ent) => { if (ent && S.user) { S.ent = ent; render(); } });
+  A.onAccessRevoked(({ slug }) => {
+    const g = (S.games || []).find((x) => x.slug === slug);
+    const name = g ? g.name : slug;
+    S.running.delete(slug);
+    closeModal();
+    const box = h('div', { class: 'modal' }, h('h3', {}, t('access.revokedTitle')), h('p', {}, t('access.revoked', { name })),
+      h('button', { class: 'btn primary', onclick: closeModal }, t('access.ok')));
+    document.body.append(h('div', { class: 'overlay', id: 'modal', role: 'alertdialog', 'aria-modal': 'true' }, box));
+    render();
+  });
   A.onUpdate((u) => { S.update = u; if (u.state === 'ready') toast(t('update.ready')); render(); });
 
   // ---------- démarrage ----------

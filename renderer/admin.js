@@ -461,8 +461,7 @@
           h('button', { class: 'btn sm', type: 'button', onclick: () => grantGameModal(u) }, t('adm.users.giveGame')),
           h('button', { class: 'btn sm', type: 'button', onclick: () => grantPassModal(u) }, t('adm.users.givePass')),
           h('button', { class: 'btn sm outline-danger', type: 'button', onclick: () => revokeModal(u) }, t('adm.users.revoke')),
-          h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resetDeviceModal(u) }, t('adm.users.resetDevice')),
-          h('button', { class: 'btn sm ghost', type: 'button', onclick: () => roleModal(u) }, t('adm.users.role')))));
+          h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resetDeviceModal(u) }, t('adm.users.resetDevice')))));
       return h('div', { class: 'adm' }, head(t('adm.users.title'), t('adm.users.sub')),
         h('div', { class: 'row searchrow' }, q, h('button', { class: 'btn', type: 'button', onclick: go }, t('adm.search'))),
         M.users == null ? h('div', { class: 'empty' }, t('adm.loading')) : rows.length ? h('div', { class: 'ulist' }, rows) : h('div', { class: 'empty' }, t('adm.users.none')));
@@ -508,13 +507,6 @@
       modal(t('adm.users.revoke'), h('div', { class: 'stack' }, h('small', {}, '@' + u.tiktok), sel, h('div', { class: 'err' })),
         [h('button', { class: 'btn outline-danger', type: 'button', onclick: () => { if (confirm(t('adm.users.confirmRevoke'))) act(() => adm('POST', '/admin/revoke', { userId: u.id, slug: sel.value }), t('adm.users.revoked')); } }, t('adm.users.revoke')), h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, t('adm.cancel'))]);
     }
-    function roleModal(u) {
-      const sel = h('select', {}, ['player', 'admin'].map((r) => h('option', { value: r, selected: r === u.role }, t('adm.role.' + r))));
-      sel.value = u.role;
-      modal(t('adm.users.role'), h('div', { class: 'stack' }, h('small', {}, '@' + u.tiktok), sel, h('div', { class: 'err' })),
-        [h('button', { class: 'btn primary', type: 'button', onclick: () => act(() => adm('POST', '/admin/users/' + encodeURIComponent(u.id) + '/role', { role: sel.value }), t('adm.saved')) }, t('adm.save')), h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, t('adm.cancel'))]);
-    }
-
     // ---------- statistiques ----------
     function statsView() {
       const s = M.stats;

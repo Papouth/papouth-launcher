@@ -69,6 +69,7 @@
   'err.resume_requires_new_subscription': 'PayPal ไม่รองรับการเปิดใช้งานการสมัครที่ยกเลิกแล้วอีกครั้ง กรุณาสมัคร Game Pass ใหม่',
   'acc.devTitle': 'โหมดนักพัฒนา',
   'toast.ready': '{name} พร้อมเล่นแล้ว', 'toast.uninstalled': 'ถอนการติดตั้ง {name} แล้ว', 'toast.confirmUninstall': 'ถอนการติดตั้ง {name} ใช่หรือไม่?',
+  'access.revokedTitle': 'ยกเลิกสิทธิ์การเข้าถึงแล้ว', 'access.revoked': 'สิทธิ์การเข้าถึง {name} ของคุณถูกยกเลิกแล้ว เกมถูกปิดแล้ว', 'access.ok': 'ตกลง',
   'toast.launchFail': 'ไม่สามารถเปิดเกมได้: {error}', 'toast.demoPortal': 'โหมดเดโม: ใช้พอร์ทัลไม่ได้',
   'toast.paid': 'ยืนยันการชำระเงินแล้ว ขอบคุณ! 🎮', 'toast.timeout': 'หมดเวลา: ยังไม่ยืนยันการชำระเงิน หากคุณชำระเงินแล้ว โปรดเปิดแลนเชอร์ใหม่อีกครั้งในอีกสักครู่',
   'pay.passTitle': 'Game Pass {plan}', 'pay.choose': 'เลือกวิธีชำระเงิน',

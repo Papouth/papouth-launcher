@@ -95,6 +95,7 @@ class StoreApi {
   devices() { return this.request('GET', '/devices'); }
   transferDevice(hwid, name) { return this.request('POST', '/devices/transfer', { hwid, name }); }
   download(slug, hwid) { return this.request('GET', '/download/' + encodeURIComponent(slug) + '?hwid=' + encodeURIComponent(hwid)); }
+  heartbeat(token) { return this.request('POST', '/license/heartbeat', { token }, { auth: false }); }
   launchToken(slug, hwid) { return this.request('POST', '/launch-token', { slug, hwid }); }
 }
 
