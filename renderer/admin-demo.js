@@ -69,6 +69,17 @@
       }
     }
 
+    // État des paiements (démo) : Stripe en test à moitié configuré tant que « Reconfigurer » n'a pas été cliqué
+    const pay = { done: false, lastRun: null };
+    const payStatus = () => {
+      const d = pay.done, total = 2 + games.filter((g) => g.status === 'published').length;
+      return {
+        running: false, lastRunAt: pay.lastRun,
+        stripe: { provider: 'stripe', mode: 'test', configured: true, keys: { secretKey: true }, prices: { ok: d, total, done: d ? total : 2, missing: [] }, webhook: { ok: d }, portal: { ok: d }, ok: d, lastError: d ? null : 'webhook: PUBLIC_URL doit commencer par https://', lastRun: pay.lastRun },
+        paypal: { provider: 'paypal', mode: null, configured: false, keys: { clientId: false, clientSecret: false }, plans: { ok: false, done: 0, total: 2 }, webhook: { ok: false }, ok: false, lastError: null, lastRun: null },
+      };
+    };
+
     function handle(method, route, body) {
       const u = new URL(route, 'http://x');
       const seg = u.pathname.split('/').filter(Boolean).slice(1); // sans "admin"
@@ -291,6 +302,12 @@
           x.firestore.forEach((r) => { r.state = r.state === 'error' ? 'synced' : r.state; r.lastError = null; r.syncedAt = now(); });
           audit('firestore.resync', x.email);
           return { ok: true, firestore: JSON.parse(JSON.stringify(x.firestore)) };
+        }
+        case 'GET payments :slug': return payStatus(); // /admin/payments/status
+        case 'POST payments :slug': { // /admin/payments/setup
+          pay.done = true; pay.lastRun = new Date().toISOString();
+          audit('payments.setup');
+          return payStatus();
         }
         case 'GET log': return { log: log.slice(0, 200) };
         default: break;

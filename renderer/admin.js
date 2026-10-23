@@ -14,17 +14,18 @@
   function create(ctx) {
     const { A, h, t, svg, S, render, call, toast, errText, money, fmtDate, saleView } = ctx;
     const adm = (method, path, body) => call(A.admin.call(method, path, body));
-    const M = { tab: 'games', games: null, edit: null, users: null, q: '', stats: null, log: null, preview: null, busy: false };
+    const M = { tab: 'games', games: null, edit: null, users: null, q: '', stats: null, log: null, pay: null, paying: false, preview: null, busy: false };
     let upSeq = 0;
 
     const ICONS = {
       games: 'M6 11h4M8 9v4M15 12h.01M18 10h.01M7 6h10a4 4 0 014 4v4a4 4 0 01-4 4h-1.5L14 16h-4l-1.5 2H7a4 4 0 01-4-4v-4a4 4 0 014-4z',
       users: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.5a3.5 3.5 0 010 6.5M18 14.8c2.2.6 3.5 2.3 3.5 5.2',
       stats: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
+      payments: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 10h18M7 15h4',
       log: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7',
       admin: 'M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z'
     };
-    const tabs = ['games', 'users', 'stats', 'log'];
+    const tabs = ['games', 'users', 'stats', 'payments', 'log'];
 
     // ---------- navigation ----------
     const canLeave = () => !M.edit || !M.edit.dirty || confirm(t('adm.unsaved'));
@@ -47,6 +48,7 @@
         if (tab === 'games') M.games = (await adm('GET', '/admin/games')).games;
         else if (tab === 'users') M.users = (await adm('GET', '/admin/users?q=' + encodeURIComponent(M.q))).users;
         else if (tab === 'stats') M.stats = await adm('GET', '/admin/stats');
+        else if (tab === 'payments') M.pay = await adm('GET', '/admin/payments/status');
         else if (tab === 'log') M.log = (await adm('GET', '/admin/log?limit=200')).log;
       } catch (e) { toast(errText(e), 'error'); }
       M.busy = false;
@@ -717,6 +719,49 @@
             h('tbody', {}, (s.games || []).map((g) => h('tr', {}, h('td', {}, g.name), h('td', {}, chip(g.status)), h('td', {}, money(g.priceCents / 100)), h('td', {}, window.I18N.num(g.sales)), h('td', {}, window.I18N.num(g.granted || 0))))))]);
     }
 
+    // ---------- paiements (Stripe / PayPal : état de la configuration automatique) ----------
+    async function runPaySetup() {
+      if (M.paying) return;
+      M.paying = true; keepScroll(render);
+      try { M.pay = await adm('POST', '/admin/payments/setup'); toast(t('adm.pay.setupDone')); }
+      catch (e) { toast(errText(e), 'error'); }
+      M.paying = false;
+      if (S.tab === 'admin' && M.tab === 'payments') keepScroll(render);
+    }
+    function paymentsView() {
+      const P = M.pay;
+      const running = M.paying || !!(P && P.running);
+      const chipFor = (state) => h('span', { class: 'pchip ' + state }, t('adm.pay.st.' + (state === 'ok' ? 'ok' : state === 'bad' ? 'err' : 'todo')));
+      const card = (id, name, p, rows) => {
+        const mode = p.configured && p.mode ? (p.mode === 'live' ? 'live' : 'test') : 'none';
+        const stateOf = (ok) => (ok ? 'ok' : p.configured && p.lastError ? 'bad' : 'warn');
+        return h('section', { class: 'panel pay', id: 'pay-' + id },
+          h('div', { class: 'pay-head' }, h('h2', { class: 'ptitle' }, name),
+            h('span', { class: 'pmode ' + mode, 'data-mode': mode, title: t('adm.pay.modeHint.' + mode) }, t('adm.pay.mode.' + mode))),
+          h('p', { class: 'sub' }, t('adm.pay.modeHint.' + mode)),
+          h('div', { class: 'prows' }, rows.map(([key, label, ok, detail]) => h('div', { class: 'prow', 'data-row': key }, h('span', { class: 'plab' }, label, detail ? h('small', {}, ' ' + detail) : null), chipFor(stateOf(ok))))),
+          p.lastError ? h('p', { class: 'perr', role: 'alert' }, t('adm.pay.lastError') + ' : ' + p.lastError) : null,
+          h('small', { class: 'sub' }, t('adm.pay.lastRun') + ' : ' + (p.lastRun ? new Date(p.lastRun).toLocaleString(window.I18N.lang()) : t('adm.pay.never'))));
+      };
+      const cards = !P ? h('div', { class: 'empty' }, t('adm.loading')) : h('div', { class: 'pay-grid' },
+        card('stripe', 'Stripe', P.stripe, [
+          ['key', t('adm.pay.row.key'), !!(P.stripe.keys && P.stripe.keys.secretKey)],
+          ['prices', t('adm.pay.row.prices'), !!(P.stripe.prices && P.stripe.prices.ok), P.stripe.prices && P.stripe.configured ? t('adm.pay.prices.n', { done: P.stripe.prices.done, total: P.stripe.prices.total }) : ''],
+          ['webhook', t('adm.pay.row.webhook'), !!(P.stripe.webhook && P.stripe.webhook.ok)],
+          ['portal', t('adm.pay.row.portal'), !!(P.stripe.portal && P.stripe.portal.ok)]]),
+        card('paypal', 'PayPal', P.paypal, [
+          ['key', t('adm.pay.row.key'), !!(P.paypal.keys && P.paypal.keys.clientId && P.paypal.keys.clientSecret)],
+          ['plans', t('adm.pay.row.plans'), !!(P.paypal.plans && P.paypal.plans.ok), P.paypal.plans && P.paypal.configured ? t('adm.pay.plans.n', { done: P.paypal.plans.done, total: P.paypal.plans.total }) : ''],
+          ['webhook', t('adm.pay.row.webhook'), !!(P.paypal.webhook && P.paypal.webhook.ok)]]));
+      const help = h('section', { class: 'panel wide pay-help', id: 'pay-help' }, h('h2', { class: 'ptitle' }, t('adm.pay.help.title')),
+        h('ol', {}, ['stripe', 'paypal', 'after', 'live'].map((k) => h('li', {}, t('adm.pay.help.' + k)))));
+      return h('div', { class: 'adm' },
+        head(t('adm.pay.title'), t('adm.pay.sub'),
+          h('button', { class: 'btn ghost sm', type: 'button', onclick: () => load('payments') }, t('adm.refresh')),
+          h('button', { class: 'btn primary sm', type: 'button', id: 'pay-setup', disabled: running, onclick: runPaySetup }, running ? t('adm.pay.running') : t('adm.pay.setup'))),
+        cards, help);
+    }
+
     // ---------- journal ----------
     function logView() {
       const label = (a) => (window.I18N.has('adm.act.' + a) ? t('adm.act.' + a) : a);
@@ -728,7 +773,7 @@
 
     function view() {
       if (M.tab === 'games') return gamesView();
-      return M.tab === 'users' ? usersView() : M.tab === 'stats' ? statsView() : logView();
+      return M.tab === 'users' ? usersView() : M.tab === 'stats' ? statsView() : M.tab === 'payments' ? paymentsView() : logView();
     }
     // Entrée directe (aperçu navigateur : ?view=admin&adm=users&edit=slug)
     async function boot(tab, slug) {
