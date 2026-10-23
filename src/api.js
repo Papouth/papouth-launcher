@@ -82,6 +82,8 @@ class StoreApi {
   me() { return this.request('GET', '/me'); }
   games(lang) { return this.request('GET', '/games' + (lang ? '?lang=' + encodeURIComponent(lang) : ''), undefined, { auth: false, lang }); }
   entitlements() { return this.request('GET', '/entitlements'); }
+  library() { return this.request('GET', '/library'); }
+  libraryAdd(slug) { return this.request('POST', '/library/add', { slug }); }
   checkout(provider, product, slug, lang) {
     const body = { provider, product };
     if (slug) body.slug = slug;

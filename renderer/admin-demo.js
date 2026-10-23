@@ -19,7 +19,7 @@
       }
       const media = (g.media || []).map((m) => ({ id: rid(), type: m.type, url: m.url, path: m.url, ...(m.thumb ? { thumb: m.thumb } : {}), caption: '' }));
       games.push({
-        slug: g.slug, name: g.name, accent: String(g.accent).toLowerCase(), priceCents: Math.round(g.price * 100), version: g.version, sizeMb: g.sizeMb, status: 'published', sortOrder: i,
+        slug: g.slug, name: g.name, accent: String(g.accent).toLowerCase(), kind: g.kind === 'software' ? 'software' : 'game', free: !!g.free, priceCents: g.free ? 0 : Math.round(g.price * 100), version: g.version, sizeMb: g.sizeMb, status: 'published', sortOrder: i,
         i18n, languages: g.languages, requirements: { os: g.requirements.os, needs }, coverUrl: g.image || '', coverPath: g.image || '', media,
         download: { mode: 'upload', exe: g.name.replace(/[^A-Za-z0-9]/g, '') + '.exe', hasBuild: true, sha256: rid() + rid() + rid() + rid() + rid() + rid() + rid() + rid(), size: g.sizeMb * 1048576, uploadedAt: Date.now() - 864e5 * (i + 3), originalName: g.slug + '.zip' },
         firestore: { configured: false, enabled: false }, gamehubId: null, featured: false, featuredText: {}, featuredUntil: null,
@@ -54,7 +54,13 @@
     function patch(g, b) {
       if (b.name !== undefined) { if (!String(b.name).trim()) throw err('invalid_field', 'Le nom du jeu est obligatoire.'); g.name = String(b.name).trim().slice(0, 80); }
       if (b.accent !== undefined) { if (!/^#[0-9a-f]{6}$/i.test(b.accent)) throw err('invalid_field', 'Couleur d\'accent invalide (format #rrggbb).'); g.accent = b.accent.toLowerCase(); }
-      if (b.priceCents !== undefined) { if (!Number.isInteger(b.priceCents) || b.priceCents < 50) throw err('invalid_price', 'Prix invalide (entre 0,50 € et 10 000 €).'); g.priceCents = b.priceCents; }
+      if (b.kind !== undefined) { if (b.kind !== 'game' && b.kind !== 'software') throw err('invalid_field', 'Type invalide (jeu ou logiciel).'); g.kind = b.kind; }
+      if (b.free !== undefined) g.free = !!b.free;
+      if (b.priceCents !== undefined) {
+        if (g.free) { if (b.priceCents !== 0) throw err('invalid_price', 'Un élément gratuit a un prix de 0 €.'); }
+        else { if (!Number.isInteger(b.priceCents) || b.priceCents < 50 || b.priceCents > 1000000) throw err('invalid_price', 'Prix invalide (entre 0,50 € et 10 000 €).'); g.priceCents = b.priceCents; }
+      }
+      if (g.free) g.priceCents = 0; else if (g.priceCents < 50) throw err('invalid_price', 'Prix invalide (entre 0,50 € et 10 000 €).');
       if (b.version !== undefined) { if (!/^[0-9A-Za-z][0-9A-Za-z.+_-]{0,31}$/.test(b.version)) throw err('invalid_field', 'Version invalide (ex. 1.2.0).'); g.version = b.version; }
       if (b.sizeMb !== undefined) g.sizeMb = Math.max(0, Math.round(Number(b.sizeMb) || 0));
       if (b.languages !== undefined) g.languages = b.languages;
@@ -101,11 +107,12 @@
           if (slug.length < 2 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) throw err('invalid_slug', 'Identifiant invalide : 2 à 40 caractères, minuscules, chiffres et tirets.');
           if (games.some((g) => g.slug === slug)) throw err('slug_taken', 'Un jeu utilise déjà cet identifiant.');
           const g = {
-            slug, name, accent: '#8a8f98', priceCents: 4000, version: '1.0.0', sizeMb: 0, status: 'draft', sortOrder: games.length,
+            slug, name, kind: 'game', free: false, accent: '#8a8f98', priceCents: 4000, version: '1.0.0', sizeMb: 0, status: 'draft', sortOrder: games.length,
             i18n: Object.fromEntries(langs.map((l) => [l, { tagline: '', description: '', features: [], howItWorks: [] }])),
             languages: ['Français', 'English', 'Español', 'ไทย', 'Bahasa Melayu'], requirements: { os: 'Windows 10/11', needs: {} }, coverUrl: '', coverPath: '', media: [],
             download: { mode: 'upload', exe: name.replace(/[^A-Za-z0-9]/g, '') + '.exe', hasBuild: false }, stripeProductId: null, stripePriceId: null, createdAt: now(), updatedAt: now()
           };
+          patch(g, { ...(b.kind !== undefined ? { kind: b.kind } : {}), ...(b.free !== undefined ? { free: b.free } : {}), ...(b.free ? { priceCents: 0 } : {}) });
           games.push(g); audit('game.create', slug, name);
           return { game: out(g) };
         }
@@ -237,9 +244,9 @@
           const gifted = Object.fromEntries(games.map((g) => [g.slug, on ? users.filter((x) => (x.origins || {})[g.slug] === 'admin').length : 0]));
           return {
             users: on ? pool.length : 0, activePasses: { monthly: plan('monthly'), yearly: plan('yearly') }, passesTotal: plan('monthly') + plan('yearly'), giftedPasses: 0,
-            lifetimeSales: sales, revenueMonthEur: revenue, revenueTotalEur: revenue, gifts: { passes: 0, games: Object.values(gifted).reduce((a, c) => a + c, 0) },
+            lifetimeSales: Object.fromEntries(games.filter((g) => !g.free).map((g) => [g.slug, sales[g.slug]])), lifetimeDownloads: Object.fromEntries(games.filter((g) => g.free).map((g) => [g.slug, on ? 42 : 0])), revenueMonthEur: revenue, revenueTotalEur: revenue, gifts: { passes: 0, games: Object.values(gifted).reduce((a, c) => a + c, 0) },
             statsSince, currentPaymentMode: { stripe: 'test', paypal: 'test' },
-            games: sorted().map((g) => ({ slug: g.slug, name: g.name, status: g.status, priceCents: g.priceCents, sales: sales[g.slug], granted: gifted[g.slug] }))
+            games: sorted().map((g) => (g.free ? { slug: g.slug, name: g.name, status: g.status, kind: g.kind, free: true, priceCents: 0, downloads: on ? 42 : 0 } : { slug: g.slug, name: g.name, status: g.status, kind: g.kind, free: false, priceCents: g.priceCents, sales: sales[g.slug], granted: gifted[g.slug] }))
           };
         }
         case 'POST stats :slug': {

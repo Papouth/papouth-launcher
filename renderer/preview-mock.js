@@ -14,6 +14,9 @@
       tagline: L('Garçons contre filles, le chat décide.', 'Boys vs girls, the chat decides.', 'Chicos contra chicas, el chat decide.', 'ชายปะทะหญิง แชตเป็นผู้ตัดสิน', 'Lelaki lawan perempuan, sembang yang menentukan.'),
       description: L('Plusieurs modes de duel entre les deux camps.', 'Several duel modes between the two sides.', 'Varios modos de duelo entre los dos bandos.', 'หลายโหมดดวลกันระหว่างสองฝ่าย', 'Beberapa mod duel antara kedua-dua pihak.') }
   ];
+  BASE.push({ slug: 'overlay-forge', name: 'Overlay Forge', kind: 'software', free: true, accent: '#19B38A', price: 0, version: '1.0.0', sizeMb: 60,
+    tagline: L('Créez vos overlays TikTok LIVE, gratuitement.', 'Build your TikTok LIVE overlays, for free.', 'Crea tus overlays de TikTok LIVE, gratis.', 'สร้างโอเวอร์เลย์ TikTok LIVE ได้ฟรี', 'Cipta overlay TikTok LIVE anda, percuma.'),
+    description: L('Un outil gratuit pour fabriquer des overlays de cadeaux et d\'actions pour vos jeux.', 'A free tool to build gift and action overlays for your games.', 'Una herramienta gratuita para crear overlays de regalos y acciones para tus juegos.', 'เครื่องมือฟรีสำหรับสร้างโอเวอร์เลย์ของขวัญและแอ็กชันสำหรับเกมของคุณ', 'Alat percuma untuk mencipta overlay hadiah dan tindakan untuk permainan anda.') });
   const EXTRA = {
     needs: L('TikFinity (gratuit)', 'TikFinity (free)', 'TikFinity (gratis)', 'TikFinity (ฟรี)', 'TikFinity (percuma)'),
     features: [
@@ -30,7 +33,7 @@
   const pick = (v, lang) => v[lang] || v.fr;
   function gamesFor(lang) {
     return BASE.map((g) => ({
-      ...g, tagline: pick(g.tagline, lang), description: pick(g.description, lang), image: '', media: [],
+      kind: 'game', free: false, inPass: !g.free, ...g, tagline: pick(g.tagline, lang), description: pick(g.description, lang), image: '', media: [],
       requirements: { os: 'Windows 10/11', needs: pick(EXTRA.needs, lang) },
       languages: ['Français', 'English', 'Español', 'ไทย', 'Bahasa Melayu'],
       features: EXTRA.features.map((x) => pick(x, lang)), howItWorks: EXTRA.howItWorks.map((x) => pick(x, lang))
@@ -52,8 +55,9 @@
   let ent = {
     pass: hasPass ? { active: true, plan: 'yearly', provider: q.get('provider') || 'stripe', renewsAt: '2027-03-14T00:00:00Z', cancelAtPeriodEnd: q.get('cancelled') === '1' } : { active: false, plan: null, provider: null, renewsAt: null, cancelAtPeriodEnd: false },
     owned: hasPass ? [] : ['pop-riot'],
-    access: hasPass ? games.map((g) => g.slug) : ['pop-riot']
+    access: hasPass ? games.map((g) => g.slug) : ['pop-riot', 'overlay-forge']
   };
+  let obtained = q.get('obtained') === '1' ? ['overlay-forge'] : [];
   let installed = hasPass ? { 'paintball-master': { version: '1.0.0', exe: 'a.exe', path: 'C:\\Papouth\\Games\\paintball-master' }, 'pop-riot': { version: '1.0.3', exe: 'a.exe', path: 'C:\\x' } } : { 'pop-riot': { version: '1.0.3', exe: 'a.exe', path: 'C:\\x' } };
   const listeners = { p: [], g: [], u: [], a: [], d: [] };
   const jobsMock = {}; let jobN = 0;
@@ -100,6 +104,7 @@
       if (fi >= 0) { games[fi].featured = true; games[fi].featuredText = q.get('ftext') || games[fi].tagline; games.unshift(...games.splice(fi, 1)); }
       return { ok: true, data: { games } };
     }, entitlements: () => R(ent),
+    library: () => R({ obtained }), libraryAdd: (slug) => { if (!obtained.includes(slug)) obtained = [...obtained, slug]; return R({ ok: true, obtained }); },
     checkout: () => R({ url: null }), billingPortal: () => R({ url: null }),
     cancelSubscription: () => { ent = { ...ent, pass: { ...ent.pass, cancelAtPeriodEnd: true } }; return R({ pass: ent.pass }); },
     resumeSubscription: () => {

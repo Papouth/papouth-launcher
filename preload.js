@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('alien', {
   startDemo: () => call('demo:start'),
   catalog: (lang) => call('store:catalog', lang),
   entitlements: () => call('store:entitlements'),
+  library: () => call('store:library'),
+  libraryAdd: (slug) => call('store:libraryAdd', slug),
   checkout: (provider, product, slug, lang) => call('store:checkout', { provider, product, slug, lang }),
   billingPortal: (lang) => call('store:portal', lang),
   cancelSubscription: () => call('store:cancel'),

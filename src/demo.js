@@ -12,6 +12,10 @@ const BASE = [
     tagline: L('Garçons contre filles, le chat décide.', 'Boys vs girls, the chat decides.', 'Chicos contra chicas, el chat decide.', 'ชายปะทะหญิง แชตเป็นผู้ตัดสิน', 'Lelaki lawan perempuan, sembang yang menentukan.'),
     description: L('Plusieurs modes de duel entre les deux camps.', 'Several duel modes between the two sides.', 'Varios modos de duelo entre los dos bandos.', 'หลายโหมดดวลกันระหว่างสองฝ่าย', 'Beberapa mod duel antara kedua-dua pihak.') }
 ];
+// Logiciel gratuit de démonstration (accessible à tous, hors Game Pass)
+BASE.push({ slug: 'overlay-forge', name: 'Overlay Forge', kind: 'software', free: true, accent: '#19B38A', price: 0, version: '1.0.0', sizeMb: 60,
+  tagline: L('Créez vos overlays TikTok LIVE, gratuitement.', 'Build your TikTok LIVE overlays, for free.', 'Crea tus overlays de TikTok LIVE, gratis.', 'สร้างโอเวอร์เลย์ TikTok LIVE ได้ฟรี', 'Cipta overlay TikTok LIVE anda, percuma.'),
+  description: L('Un outil gratuit pour fabriquer des overlays de cadeaux et d\'actions pour vos jeux.', 'A free tool to build gift and action overlays for your games.', 'Una herramienta gratuita para crear overlays de regalos y acciones para tus juegos.', 'เครื่องมือฟรีสำหรับสร้างโอเวอร์เลย์ของขวัญและแอ็กชันสำหรับเกมของคุณ', 'Alat percuma untuk mencipta overlay hadiah dan tindakan untuk permainan anda.') });
 const EXTRA = {
   needs: L('TikFinity (gratuit)', 'TikFinity (free)', 'TikFinity (gratis)', 'TikFinity (ฟรี)', 'TikFinity (percuma)'),
   features: [
@@ -37,7 +41,7 @@ const mediaFor = (slug) => (MEDIA[slug] || []).map((m) => ({ ...m, url: dm(slug,
 const pick = (v, lang) => v[lang] || v.fr;
 function gamesFor(lang) {
   return BASE.map((g) => ({
-    ...g, tagline: pick(g.tagline, lang), description: pick(g.description, lang), image: dm(g.slug, '00-cover.jpg'), media: mediaFor(g.slug),
+    kind: 'game', free: false, inPass: !g.free, ...g, tagline: pick(g.tagline, lang), description: pick(g.description, lang), image: MEDIA[g.slug] ? dm(g.slug, '00-cover.jpg') : '', media: mediaFor(g.slug),
     requirements: { os: 'Windows 10/11', needs: pick(EXTRA.needs, lang) },
     languages: ['Français', 'English', 'Español', 'ไทย', 'Bahasa Melayu'],
     features: EXTRA.features.map((x) => pick(x, lang)), howItWorks: EXTRA.howItWorks.map((x) => pick(x, lang))
@@ -48,7 +52,7 @@ function entitlements(state) {
   return {
     pass: state.pass || { active: false, plan: null, provider: null, renewsAt: null, cancelAtPeriodEnd: false },
     owned: state.owned || [],
-    access: state.pass && state.pass.active ? BASE.map((g) => g.slug) : (state.owned || [])
+    access: [...new Set([...(state.pass && state.pass.active ? BASE.filter((g) => !g.free).map((g) => g.slug) : (state.owned || [])), ...BASE.filter((g) => g.free).map((g) => g.slug)])]
   };
 }
 module.exports = { gamesFor, user, entitlements };

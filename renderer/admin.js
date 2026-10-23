@@ -94,7 +94,7 @@
       },
       h('span', { class: 'grip', 'aria-hidden': 'true' }, '⋮⋮'),
       h('div', { class: 'gthumb', style: g.coverUrl ? 'background-image:url("' + g.coverUrl.replace(/["\\()]/g, '') + '")' : 'background-color:' + g.accent }),
-      h('div', { class: 'ginfo' }, h('b', {}, g.name), h('small', {}, g.slug + ' · v' + g.version + ' · ' + money(g.priceCents / 100))),
+      h('div', { class: 'ginfo' }, h('b', {}, g.name), h('small', {}, g.slug + ' · v' + g.version + ' · ' + (g.free ? t('tag.free') : money(g.priceCents / 100)) + (g.kind === 'software' ? ' · ' + t('tag.software') : ''))),
       chip(g.status), g.hasBuild === false && !(g.download && (g.download.mode === 'url' ? g.download.url : g.download.mode === 'github' ? g.download.github : false)) ? h('span', { class: 'chip st draft' }, t('adm.badge.nobuild')) : null,
       h('div', { class: 'row' },
         g.status === 'published' ? h('button', { class: 'btn sm ghost star' + (g.featured ? ' on' : ''), type: 'button', 'data-star': g.slug, 'aria-pressed': g.featured ? 'true' : 'false', 'aria-label': g.featured ? t('adm.feat.unset') : t('adm.feat.set'), title: g.featured ? t('adm.feat.unset') : t('adm.feat.set'), onclick: () => toggleFeature(g) }, g.featured ? '\u2605' : '\u2606') : null,
@@ -143,7 +143,7 @@
         const d = g.i18n[l] || {};
         i18n[l] = { tagline: d.tagline || '', description: d.description || '', features: [...(d.features || [])], howItWorks: pad3(d.howItWorks), needs: (g.requirements.needs && g.requirements.needs[l]) || '' };
       }
-      return { name: g.name, slug: g.slug, accent: g.accent, price: String(g.priceCents / 100).replace('.', ','), version: g.version, sizeMb: String(g.sizeMb || 0), languages: (g.languages || []).join(', '), os: g.requirements.os || '', exe: (g.download && g.download.exe) || '', gamehubId: g.gamehubId || '', i18n };
+      return { name: g.name, slug: g.slug, accent: g.accent, kind: g.kind === 'software' ? 'software' : 'game', free: !!g.free, price: g.free ? '0' : String(g.priceCents / 100).replace('.', ','), version: g.version, sizeMb: String(g.sizeMb || 0), languages: (g.languages || []).join(', '), os: g.requirements.os || '', exe: (g.download && g.download.exe) || '', gamehubId: g.gamehubId || '', i18n };
     }
     function featState(g) {
       const text = {};
@@ -178,9 +178,9 @@
     const missing = (f, l) => { const d = f.i18n[l]; return !d.tagline.trim() || !d.description.trim() || !d.features.some((x) => x.trim()) || d.howItWorks.filter((x) => x.trim()).length < 3; };
     function payloadOf(E) {
       const f = E.f, g = E.game;
-      const price = Math.round(parseFloat(String(f.price).replace(',', '.')) * 100);
+      const price = f.free ? 0 : Math.round(parseFloat(String(f.price).replace(',', '.')) * 100);
       if (!f.name.trim()) throw Object.assign(new Error(t('adm.err.name')), { code: 'invalid_field' });
-      if (!Number.isFinite(price) || price < 50) throw Object.assign(new Error(t('adm.err.price')), { code: 'invalid_price' });
+      if (!f.free && (!Number.isFinite(price) || price < 50 || price > 1000000)) throw Object.assign(new Error(t('adm.err.price')), { code: 'invalid_price' });
       const i18n = {}, needs = {};
       for (const l of LANGS) {
         const d = f.i18n[l];
@@ -188,7 +188,7 @@
         needs[l] = d.needs.trim();
       }
       return {
-        name: f.name.trim(), ...(g.status === 'draft' && f.slug !== g.slug ? { slug: f.slug.trim() } : {}), accent: f.accent, priceCents: price, version: f.version.trim(),
+        name: f.name.trim(), ...(g.status === 'draft' && f.slug !== g.slug ? { slug: f.slug.trim() } : {}), accent: f.accent, kind: f.kind, free: !!f.free, priceCents: price, version: f.version.trim(),
         sizeMb: Number(f.sizeMb) || 0, languages: f.languages.split(',').map((x) => x.trim()).filter(Boolean),
         requirements: { os: f.os.trim(), needs }, i18n, gamehubId: f.gamehubId || null, ...(f.exe.trim() ? { download: { exe: f.exe.trim() } } : {})
       };
@@ -232,7 +232,7 @@
       const pick = (k) => (Array.isArray(fr[k]) ? ((d[k] || []).filter((x) => x.trim()).length ? d[k] : fr[k]).filter((x) => x.trim()) : (d[k] || fr[k]));
       const price = parseFloat(String(f.price).replace(',', '.'));
       return {
-        slug: g.slug, name: f.name || g.name, tagline: pick('tagline'), description: pick('description'), image: g.coverUrl || '', accent: f.accent, price: Number.isFinite(price) ? price : 0,
+        slug: g.slug, name: f.name || g.name, tagline: pick('tagline'), description: pick('description'), image: g.coverUrl || '', accent: f.accent, kind: f.kind, free: !!f.free, price: f.free || !Number.isFinite(price) ? 0 : price,
         version: f.version, sizeMb: Number(f.sizeMb) || 0, media: g.media.map((m) => ({ type: m.type, url: m.url, thumb: m.thumb, caption: m.caption })),
         features: pick('features'), howItWorks: pick('howItWorks'), requirements: { os: f.os, needs: d.needs || fr.needs }, languages: f.languages.split(',').map((x) => x.trim()).filter(Boolean)
       };
@@ -270,7 +270,13 @@
             fld(t('adm.f.name'), nameIn),
             fld(t('adm.f.slug'), slugIn, isDraft ? t('adm.f.slugHint') : t('adm.f.slugLocked')),
             fld(t('adm.f.accent'), h('div', { class: 'row accent' }, colorIn, hex, presets)),
-            fld(t('adm.f.price'), h('input', { type: 'text', inputmode: 'decimal', ...bind('price') })),
+            fld(t('adm.f.type'), h('select', { id: 'f-kind', onchange: (ev) => { f.kind = ev.target.value; touch(); } },
+              ['game', 'software'].map((k) => h('option', { value: k, selected: f.kind === k }, t('adm.f.type.' + k))))),
+            h('div', { class: 'fld' }, h('span', {}, t('adm.f.price')),
+              h('div', { class: 'row' },
+                h('input', { type: 'text', inputmode: 'decimal', id: 'f-price', 'aria-label': t('adm.f.price'), ...bind('price'), disabled: !!f.free, value: f.free ? '0' : f.price }),
+                h('label', { class: 'tog' }, h('input', { type: 'checkbox', id: 'f-free', checked: !!f.free, onchange: (ev) => { f.free = ev.target.checked; if (f.free) f.price = '0'; else if (f.price === '0') f.price = ''; touch(); keepScroll(render); } }), t('adm.f.free'))),
+              f.free ? h('small', {}, t('adm.f.freeHint')) : null),
             fld(t('adm.f.version'), h('input', { type: 'text', maxlength: 32, ...bind('version') })),
             fld(t('adm.f.size'), h('input', { type: 'text', inputmode: 'numeric', ...bind('sizeMb') })),
             fld(t('adm.f.os'), h('input', { type: 'text', maxlength: 80, ...bind('os') })),
@@ -739,8 +745,8 @@
             s.revenueTotalEur != null ? tile(t('adm.stats.revenueTotal'), money(s.revenueTotalEur)) : null,
             s.gifts ? tile(t('adm.stats.granted'), num((s.gifts.games || 0) + (s.gifts.passes || 0))) : null),
           h('h2', {}, t('adm.stats.perGame')),
-          h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, [t('adm.f.name'), t('adm.status'), t('adm.f.price'), t('adm.stats.sales'), t('adm.stats.granted')].map((c) => h('th', {}, c)))),
-            h('tbody', {}, (s.games || []).map((g) => h('tr', {}, h('td', {}, g.name), h('td', {}, chip(g.status)), h('td', {}, money(g.priceCents / 100)), h('td', {}, num(g.sales)), h('td', {}, num(g.granted || 0))))))]);
+          h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, [t('adm.f.name'), t('adm.status'), t('adm.f.price'), t('adm.stats.sales'), t('adm.stats.granted'), t('adm.stats.downloads')].map((c) => h('th', {}, c)))),
+            h('tbody', {}, (s.games || []).map((g) => h('tr', {}, h('td', {}, g.name + (g.kind === 'software' ? ' · ' + t('tag.software') : '')), h('td', {}, chip(g.status)), h('td', {}, g.free ? t('tag.free') : money(g.priceCents / 100)), h('td', {}, g.free ? '—' : num(g.sales)), h('td', {}, g.free ? '—' : num(g.granted || 0)), h('td', {}, g.free ? num(g.downloads || 0) : '—')))))]);
     }
 
     // ---------- paiements (Stripe / PayPal : état de la configuration automatique) ----------

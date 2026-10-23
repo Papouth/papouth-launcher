@@ -13,7 +13,7 @@ const { Realtime } = require('./src/realtime');
 let win = null;
 let demoMode = cfg.DEMO;
 let demoAdminCore = null; // faux backend admin en mémoire (mode démo)
-let demoState = { pass: null, owned: [] };
+let demoState = { pass: null, owned: [], obtained: [] };
 let session = { user: null };
 const running = new Map(); // slug -> child
 const launchTokens = new Map(); // slug -> jeton de lancement en cours (vérifié par /license/heartbeat)
@@ -163,7 +163,7 @@ handle('auth:logout', async () => {
   realtime.stop(); clearToken(); api.setToken(null); session.user = null; demoMode = false;
   return true;
 });
-handle('demo:start', async () => { realtime.stop(); demoMode = true; demoAdminCore = null; demoState = { pass: null, owned: [] }; session.user = demo.user; return { user: demo.user }; });
+handle('demo:start', async () => { realtime.stop(); demoMode = true; demoAdminCore = null; demoState = { pass: null, owned: [], obtained: [] }; session.user = demo.user; return { user: demo.user }; });
 
 // ---------- Mode administrateur ----------
 const isAdmin = () => !!(session.user && session.user.role === 'admin');
@@ -262,6 +262,12 @@ function absolutize(data) {
 }
 handle('store:catalog', async (lang) => { const r = demoMode ? { games: demo.gamesFor(lang) } : absolutize(await api.games(lang)); catalogCache = (r && r.games) || []; return r; });
 handle('store:entitlements', async () => (demoMode ? demo.entitlements(demoState) : api.entitlements()));
+handle('store:library', async () => (demoMode ? { obtained: demoState.obtained.slice() } : api.library()));
+handle('store:libraryAdd', async (slug) => {
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(String(slug))) throw new ApiError('bad_request', 'Jeu invalide.');
+  if (demoMode) { if (!demoState.obtained.includes(slug)) demoState.obtained.push(slug); return { ok: true, obtained: demoState.obtained.slice() }; }
+  return api.libraryAdd(slug);
+});
 handle('store:checkout', async ({ provider, product, slug, lang }) => {
   if (demoMode) {
     // Simule un paiement validé après quelques secondes.

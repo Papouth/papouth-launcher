@@ -17,7 +17,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   const S = {
     dev: false, devOpen: false, boot: false, user: null, demo: false, demoAvailable: false, reachable: true, apiUrl: '',
     tab: new URLSearchParams(location.search).get('view') || 'store', sale: null, mi: 0,
-    games: [], ent: { pass: { active: false }, owned: [], access: [] },
+    games: [], ent: { pass: { active: false }, owned: [], access: [] }, obtained: [], filter: 'all',
     installed: {}, running: new Set(), progress: {}, busy: new Set(), update: null, version: ''
   };
   if (S.tab === 'game') { S.sale = new URLSearchParams(location.search).get('slug'); S.tab = 'store'; }
@@ -89,14 +89,18 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   }
   const hasAccess = (g) => S.ent.access.includes(g.slug);
   const isOwned = (g) => S.ent.owned.includes(g.slug);
+  const isFree = (g) => !!g.free;
+  const isSoftware = (g) => g.kind === 'software';
+  const inLibrary = (g) => hasAccess(g) && (!isFree(g) || !!S.installed[g.slug] || S.obtained.includes(g.slug));
   const passActive = () => !!(S.ent.pass && S.ent.pass.active);
   const planLabel = (p) => (p === 'yearly' ? t('plan.yearly') : p === 'monthly' ? t('plan.monthly') : '—');
 
   async function refreshAll() {
-    const [cat, ent, inst, run] = await Promise.all([A.catalog(window.I18N.lang()), A.entitlements(), A.installed(), A.running()]);
+    const [cat, ent, inst, run, lib] = await Promise.all([A.catalog(window.I18N.lang()), A.entitlements(), A.installed(), A.running(), A.library ? A.library() : Promise.resolve({ ok: true, data: { obtained: [] } })]);
     try { S.games = unwrap(cat).games || []; } catch (e) { toast(errText(e), 'error'); }
     try { S.ent = unwrap(ent); } catch (e) { if (e.code === 'network') toast(errText(e), 'error'); }
     try { S.installed = unwrap(inst) || {}; } catch (_) {}
+    try { S.obtained = (unwrap(lib) || {}).obtained || []; } catch (_) { /* bibliothèque : facultatif */ }
     loadDevice();
     try { S.running = new Set(unwrap(run)); } catch (_) {}
     render();
@@ -188,6 +192,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   async function startDemo() { try { const r = await call(A.startDemo()); S.user = r.user; S.demo = true; await refreshAll(); } catch (e) { toast(errText(e), 'error'); } }
 
   // ----- Cartes de jeux -----
+  const tagOf = (g, state) => (isFree(g) ? t('tag.free') : state === 'locked' ? t('tag.notOwned') : isOwned(g) ? t('tag.lifetime') : t('tag.pass'));
   function gameCard(g, ctx) {
     const state = gameState(g);
     const actions = actionsFor(g, ctx);
@@ -197,7 +202,8 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     return h('article', { class: 'game clickable', tabindex: '0', role: 'link', 'aria-label': t('card.view', { name: g.name }), onclick: (ev) => { if (!ev.target.closest('button,a,input')) openSale(g.slug); }, onkeydown: (ev) => { if (ev.key === 'Enter' && ev.target === ev.currentTarget) openSale(g.slug); }, 'data-accent': accKey, style: '--ac-raw:' + (/^#[0-9a-f]{3,8}$/i.test(g.accent) ? g.accent : '#7A3CFF') },
       h('div', { class: 'cover', style: 'background-image:' + bg },
         g.image ? null : h('span', { class: 'cname' }, g.name),
-        h('span', { class: 'tag badge' }, state === 'locked' ? t('tag.notOwned') : isOwned(g) ? t('tag.lifetime') : t('tag.pass'))),
+        isSoftware(g) ? h('span', { class: 'kind badge' }, t('tag.software')) : null,
+        h('span', { class: 'tag badge' }, tagOf(g, state))),
       h('div', { class: 'body' },
         h('div', { class: 'nm' }, g.name), h('div', { class: 'tg' }, g.tagline),
         h('div', { class: 'meta' }, 'v' + g.version + (g.sizeMb ? ' · ' + t('card.size', { size: window.I18N.num(g.sizeMb) }) : '') + (inst ? ' · ' + t('card.installed', { version: inst.version }) : '')),
@@ -249,10 +255,11 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         h('button', { class: 'btn primary', onclick: () => payModal({ product: 'game', slug: g.slug, title: t('card.buyTitle', { name: g.name }), price: money(g.price || 40) }) }, t('card.buy', { price: money(g.price || 40) })),
         h('button', { class: 'link', onclick: () => { toPass(); } }, t('card.inPass')));
     } else if (state === 'install' && g.available === false) actions.append(h('button', { class: 'btn', disabled: true }, t('act.soon')));
+    else if (state === 'install' && isFree(g) && !S.obtained.includes(g.slug)) actions.append(h('button', { class: 'btn primary', 'data-obtain': g.slug, onclick: () => obtain(g) }, t('act.get')));
     else if (state === 'install') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.download')));
     else if (state === 'update') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.update')), h('button', { class: 'btn ghost sm', onclick: () => play(g) }, t('act.playAnyway')));
     else if (state === 'running') actions.append(h('button', { class: 'btn', disabled: true }, t('act.playing')));
-    else actions.append(h('button', { class: 'btn play', onclick: () => play(g) }, t('act.play')));
+    else actions.append(h('button', { class: 'btn play', onclick: () => play(g) }, isSoftware(g) ? t('act.launch') : t('act.play')));
 
     if (ctx === 'library' && S.installed[g.slug] && !prog) {
       actions.append(h('div', { class: 'row' },
@@ -288,16 +295,18 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       video.muted = true;
       video.addEventListener('canplay', () => { const pr = video.play(); if (pr && pr.catch) pr.catch(() => {}); }, { once: true });
     }
-    const meta = state === 'locked'
-      ? h('div', { class: 'price-big' }, money(g.price || 40), h('small', {}, t('sale.once')))
-      : h('div', { class: 'spot-state' }, h('span', { class: 'badge' }, isOwned(g) ? t('tag.lifetime') : t('tag.pass')));
+    const meta = isFree(g)
+      ? h('div', { class: 'price-big' }, t('price.free'), h('small', {}, t('sale.freeNote')))
+      : state === 'locked'
+        ? h('div', { class: 'price-big' }, money(g.price || 40), h('small', {}, t('sale.once')))
+        : h('div', { class: 'spot-state' }, h('span', { class: 'badge' }, isOwned(g) ? t('tag.lifetime') : t('tag.pass')));
     const actions = actionsFor(g, 'store');
     actions.append(h('button', { class: 'btn ghost sm spot-view', type: 'button', onclick: () => openSale(g.slug) }, t('feat.view')));
     return h('section', { class: 'spot', id: 'featured-banner', 'data-accent': accKey, 'aria-label': t('feat.badge') + ' : ' + g.name, style: '--ac-raw:' + (/^#[0-9a-f]{3,8}$/i.test(g.accent) ? g.accent : '#7A3CFF') },
       h('div', { class: 'spot-media', style: 'background-image:' + bg, onclick: (ev) => { if (!ev.target.closest('button,a')) openSale(g.slug); } },
         poster ? null : h('span', { class: 'cname' }, g.name), video),
       h('div', { class: 'spot-body' },
-        h('span', { class: 'badge spot-badge' }, '\u2605 ' + t('feat.badge')),
+        h('span', { class: 'badge spot-badge' }, '\u2605 ' + t('feat.badge')), isSoftware(g) ? h('span', { class: 'badge kind-inline' }, t('tag.software')) : null,
         h('h2', { class: 'spot-name' }, g.name),
         h('p', { class: 'spot-text' }, g.featuredText || g.tagline),
         meta, actions));
@@ -305,6 +314,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
 
   // ----- Boutique -----
   function storeView() {
+    const shown = S.games.filter(matchFilter);
     const plan = (id, name, price, unit, note, best) => h('div', { class: 'plan' + (best ? ' best' : '') },
       best ? h('span', { class: 'badge best' }, t('store.best')) : null,
       h('div', { class: 'name' }, name), h('div', { class: 'price' }, price, h('small', {}, unit)),
@@ -317,8 +327,16 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         h('div', { class: 'plans' },
           plan('pass_monthly', t('plan.monthly'), money(30), t('store.perMonth'), t('store.noCommit'), false),
           plan('pass_yearly', t('plan.yearly'), money(240), t('store.perYear'), t('store.yearNote', { price: money(20) }), true))),
-      h('h2', {}, t('store.games')),
-      S.games.length ? h('div', { class: 'grid' }, S.games.map((g) => gameCard(g, 'store'))) : h('div', { class: 'empty' }, t('store.none')));
+      h('div', { class: 'row cathead' }, h('h2', {}, t('store.catalog')), S.games.length ? filterBar() : null),
+      !S.games.length ? h('div', { class: 'empty' }, t('store.none'))
+        : shown.length ? h('div', { class: 'grid' }, shown.map((g) => gameCard(g, 'store'))) : h('div', { class: 'empty' }, t('store.noneFiltered')));
+  }
+  // Filtres de la boutique : Tout · Jeux · Logiciels · Gratuits
+  const FILTERS = [['all', 'filter.all', () => true], ['games', 'filter.games', (g) => !isSoftware(g)], ['software', 'filter.software', isSoftware], ['free', 'filter.free', isFree]];
+  const matchFilter = (g) => (FILTERS.find((f) => f[0] === S.filter) || FILTERS[0])[2](g);
+  function filterBar() {
+    return h('div', { class: 'seg filters', id: 'store-filters', role: 'group', 'aria-label': t('filter.label') },
+      FILTERS.map(([id, key]) => h('button', { type: 'button', class: S.filter === id ? 'on' : '', 'data-filter': id, 'aria-pressed': String(S.filter === id), onclick: () => { S.filter = id; render(); } }, t(key))));
   }
 
 
@@ -361,7 +379,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     const cur = media[S.mi];
     const state = gameState(g), inst = S.installed[g.slug];
     const accKey = { 'paintball-master': 'pink', 'pop-riot': 'yellow', 'boys-girls-ultimate': 'blue' }[g.slug];
-    const badge = state === 'locked' ? t('tag.notOwned') : isOwned(g) ? t('tag.lifetime') : t('tag.pass');
+    const badge = tagOf(g, state);
     const hero = cur
       ? h('div', { class: 'viewer' + (isVideo(cur) ? ' vid' : ''), title: isVideo(cur) ? null : t('sale.zoom') },
           mediaEl(cur), isVideo(cur) ? null : h('button', { class: 'vzoom', type: 'button', 'aria-label': t('sale.zoom'), onclick: () => openLightbox(g) }),
@@ -378,10 +396,11 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         h('div', { class: 'sale-left' }, hero, strip),
         h('aside', { class: 'sale-side' },
           h('div', { class: 'panel buy' },
-            h('div', { class: 'row' }, h('h1', {}, g.name), h('span', { class: 'badge' }, badge)),
+            h('div', { class: 'row' }, h('h1', {}, g.name), h('span', { class: 'badge' }, badge), isSoftware(g) ? h('span', { class: 'badge kind-inline' }, t('tag.software')) : null),
             h('p', { class: 'sub' }, g.tagline),
-            h('div', { class: 'price-big' }, isOwned(g) ? t('sale.owned') : money(g.price || 40), isOwned(g) ? null : h('small', {}, t('sale.once'))),
-            opts.preview ? h('div', { class: 'actions' }, h('button', { class: 'btn primary', type: 'button', disabled: true }, t('card.buy', { price: money(g.price || 0) }))) : actionsFor(g, 'store'),
+            isFree(g) ? h('div', { class: 'price-big' }, t('price.free'), h('small', {}, t('sale.freeNote')))
+              : h('div', { class: 'price-big' }, isOwned(g) ? t('sale.owned') : money(g.price || 40), isOwned(g) ? null : h('small', {}, t('sale.once'))),
+            opts.preview ? h('div', { class: 'actions' }, h('button', { class: 'btn primary', type: 'button', disabled: true }, isFree(g) ? t('act.get') : t('card.buy', { price: money(g.price || 0) }))) : actionsFor(g, 'store'),
             h('dl', { class: 'kv sm' },
               row(t('sale.version'), 'v' + g.version + (inst ? ' · ' + t('card.installed', { version: inst.version }) : '')),
               row(t('sale.size'), g.sizeMb ? t('card.size', { size: window.I18N.num(g.sizeMb) }) : null),
@@ -390,13 +409,13 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.what')), h('p', { class: 'desc' }, g.description)),
       (g.features || []).length ? h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.features')), h('ul', { class: 'feat' }, g.features.map((f) => h('li', {}, f)))) : null,
       (g.howItWorks || []).length ? h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.how')), h('ol', { class: 'steps' }, g.howItWorks.map((t, i) => h('li', {}, h('b', {}, String(i + 1)), h('span', {}, t))))) : null,
-      h('section', { class: 'sale-sec upsell' }, h('div', {}, h('h2', { style: 'margin-top:0' }, t('sale.upsellTitle')), h('p', { class: 'sub', style: 'margin:0' }, t('sale.upsellText', { price: money(20) }))),
+      isFree(g) ? null : h('section', { class: 'sale-sec upsell' }, h('div', {}, h('h2', { style: 'margin-top:0' }, t('sale.upsellTitle')), h('p', { class: 'sub', style: 'margin:0' }, t('sale.upsellText', { price: money(20) }))),
         passActive() ? h('span', { class: 'badge pass' }, t('sale.passActive')) : h('button', { class: 'btn primary', onclick: toPass }, t('sale.seePass'))));
   }
 
   // ----- Bibliothèque -----
   function libraryView() {
-    const mine = S.games.filter(hasAccess);
+    const mine = S.games.filter(inLibrary);
     return h('div', {}, h('h1', {}, t('lib.title')), h('p', { class: 'sub' }, t('lib.sub')),
       mine.length ? h('div', { class: 'grid' }, mine.map((g) => gameCard(g, 'library')))
         : h('div', { class: 'empty' }, t('lib.empty') + ' ', h('button', { class: 'link', onclick: () => { S.tab = 'store'; render(); } }, t('lib.discover'))));
@@ -483,7 +502,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   async function manage() {
     try { await call(A.billingPortal(window.I18N.lang())); if (S.demo) toast(t('toast.demoPortal')); } catch (e) { toast(errText(e), 'error'); }
   }
-  async function logout() { await A.logout(); S.admin = null; S.tab = 'store'; S.user = null; S.demo = false; S.ent = { pass: { active: false }, owned: [], access: [] }; const st = unwrap(await A.getState()); S.demoAvailable = st.demoAvailable; S.reachable = st.reachable; render(); }
+  async function logout() { await A.logout(); S.admin = null; S.tab = 'store'; S.user = null; S.demo = false; S.ent = { pass: { active: false }, owned: [], access: [] }; S.obtained = []; const st = unwrap(await A.getState()); S.demoAvailable = st.demoAvailable; S.reachable = st.reachable; render(); }
 
   // ---------- actions jeux ----------
   async function install(g) {
@@ -492,6 +511,13 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     toast(t('dl.started', { name: g.name }));
     try { await call(A.install(g.slug)); } // rend la main aussitôt : le travail se fait en tâche de fond
     catch (e) { delete S.progress[g.slug]; render(); toast(errText(e), 'error'); }
+  }
+  // Élément gratuit : « Obtenir » = marqué comme obtenu (bibliothèque) puis installé, sans paiement
+  async function obtain(g) {
+    if (S.progress[g.slug]) return;
+    try { const r = await call(A.libraryAdd(g.slug)); S.obtained = (r && r.obtained) || [...new Set([...S.obtained, g.slug])]; }
+    catch (e) { toast(errText(e), 'error'); return; }
+    install(g);
   }
   async function onInstallDone(d) {
     delete S.progress[d.slug];
