@@ -22,7 +22,7 @@
         slug: g.slug, name: g.name, accent: String(g.accent).toLowerCase(), priceCents: Math.round(g.price * 100), version: g.version, sizeMb: g.sizeMb, status: 'published', sortOrder: i,
         i18n, languages: g.languages, requirements: { os: g.requirements.os, needs }, coverUrl: g.image || '', coverPath: g.image || '', media,
         download: { mode: 'upload', exe: g.name.replace(/[^A-Za-z0-9]/g, '') + '.exe', hasBuild: true, sha256: rid() + rid() + rid() + rid() + rid() + rid() + rid() + rid(), size: g.sizeMb * 1048576, uploadedAt: Date.now() - 864e5 * (i + 3), originalName: g.slug + '.zip' },
-        firestore: { configured: false, enabled: false }, gamehubId: null,
+        firestore: { configured: false, enabled: false }, gamehubId: null, featured: false, featuredText: {}, featuredUntil: null,
         stripeProductId: null, stripePriceId: null, createdAt: now(), updatedAt: now()
       });
     });
@@ -111,7 +111,7 @@
         }
         case 'DELETE games :slug': {
           const g = find(seg[1]);
-          if (g.status === 'published') { g.status = 'draft'; audit('game.unpublish', g.slug, 'via suppression'); return { game: out(g), unpublished: true }; }
+          if (g.status === 'published') { g.status = 'draft'; g.featured = false; g.featuredText = {}; g.featuredUntil = null; audit('game.unpublish', g.slug, 'via suppression'); return { game: out(g), unpublished: true }; }
           games.splice(games.indexOf(g), 1); audit('game.delete', g.slug, g.name);
           return { ok: true };
         }
@@ -125,7 +125,19 @@
           g.status = 'published'; audit('game.publish', g.slug);
           return { game: out(touch(g)) };
         }
-        case 'POST games :slug unpublish': { const g = find(seg[1]); g.status = 'draft'; audit('game.unpublish', g.slug); return { game: out(touch(g)) }; }
+        case 'POST games :slug unpublish': { const g = find(seg[1]); g.status = 'draft'; g.featured = false; g.featuredText = {}; g.featuredUntil = null; audit('game.unpublish', g.slug); return { game: out(touch(g)) }; }
+        case 'POST games :slug feature': {
+          const g = find(seg[1]);
+          if (g.status !== 'published') throw err('not_published', 'Seul un jeu publié peut être mis à la une.');
+          const text = {};
+          for (const [l, v] of Object.entries(b.featuredText || {})) { const x = String(v || '').trim(); if (x.length > 90) throw err('invalid_field', 'Texte à la une : 90 caractères maximum.'); if (x && langs.includes(l)) text[l] = x; }
+          let until = null;
+          if (b.until) { until = /^\d{4}-\d{2}-\d{2}$/.test(b.until) ? Date.parse(b.until + 'T23:59:59Z') : Date.parse(b.until); if (!Number.isFinite(until) || until <= Date.now()) throw err('invalid_field', 'La date de fin doit être dans le futur.'); }
+          for (const x of games) if (x !== g) { x.featured = false; x.featuredText = {}; x.featuredUntil = null; }
+          g.featured = true; g.featuredText = text; g.featuredUntil = until ? new Date(until).toISOString() : null; audit('game.feature', g.slug);
+          return { game: out(touch(g)) };
+        }
+        case 'DELETE games :slug feature': { const g = find(seg[1]); g.featured = false; g.featuredText = {}; g.featuredUntil = null; audit('game.unfeature', g.slug); return { game: out(touch(g)) }; }
         case 'PATCH games :slug media': {
           const g = find(seg[1]);
           if (b.captions) for (const m of g.media) if (typeof b.captions[m.id] === 'string') m.caption = b.captions[m.id].slice(0, 200);

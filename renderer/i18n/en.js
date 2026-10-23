@@ -152,6 +152,7 @@
   'adm.preview.note': 'As players will see it (including unsaved changes).',
   'adm.preview.close': 'Close preview',
   'adm.sec.general': 'General information',
+  'adm.feat.title': 'Featured game', 'feat.badge': 'Featured', 'feat.view': 'View page', 'adm.feat.set': 'Feature this game', 'adm.feat.unset': 'Remove from featured', 'adm.sec.feat': 'Featured', 'adm.feat.hint': 'One game at a time, shown large in the launcher store and on the website. Leave the highlight empty to reuse the game\'s tagline.', 'adm.feat.text': 'Highlight line (90 characters max)', 'adm.feat.until': 'Automatic end date (optional)', 'adm.feat.apply': 'Update', 'adm.feat.needPublish': 'Publish the game first to feature it.', 'adm.feat.on': 'This game is currently featured.', 'adm.feat.setOk': 'Game featured.', 'adm.feat.unsetOk': 'Game removed from featured.', 'adm.feat.until.on': 'until {date}',
   'adm.sec.texts': 'Texts per language',
   'adm.sec.media': 'Images and videos',
   'adm.sec.build': 'Game build',

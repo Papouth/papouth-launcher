@@ -95,12 +95,21 @@
       h('div', { class: 'ginfo' }, h('b', {}, g.name), h('small', {}, g.slug + ' · v' + g.version + ' · ' + money(g.priceCents / 100))),
       chip(g.status), g.hasBuild === false && !(g.download && (g.download.mode === 'url' ? g.download.url : g.download.mode === 'github' ? g.download.github : false)) ? h('span', { class: 'chip st draft' }, t('adm.badge.nobuild')) : null,
       h('div', { class: 'row' },
+        g.status === 'published' ? h('button', { class: 'btn sm ghost star' + (g.featured ? ' on' : ''), type: 'button', 'data-star': g.slug, 'aria-pressed': g.featured ? 'true' : 'false', 'aria-label': g.featured ? t('adm.feat.unset') : t('adm.feat.set'), title: g.featured ? t('adm.feat.unset') : t('adm.feat.set'), onclick: () => toggleFeature(g) }, g.featured ? '\u2605' : '\u2606') : null,
         h('button', { class: 'btn sm ghost', type: 'button', 'aria-label': t('adm.moveUp'), title: t('adm.moveUp'), disabled: i === 0, onclick: () => move(i, -1) }, '↑'),
         h('button', { class: 'btn sm ghost', type: 'button', 'aria-label': t('adm.moveDown'), title: t('adm.moveDown'), disabled: i === list.length - 1, onclick: () => move(i, 1) }, '↓'),
         h('button', { class: 'btn sm', type: 'button', onclick: () => openEditor(g.slug) }, t('adm.edit')))));
       return h('div', { class: 'adm' },
         head(t('adm.games.title'), t('adm.games.sub'), h('button', { class: 'btn primary', type: 'button', id: 'new-game', onclick: newGameModal }, '+ ' + t('adm.newGame'))),
         list == null ? h('div', { class: 'empty' }, t('adm.loading')) : list.length ? h('div', { class: 'glist' }, rows) : h('div', { class: 'empty' }, t('adm.games.none')));
+    }
+    async function toggleFeature(g) {
+      try {
+        if (g.featured) await adm('DELETE', '/admin/games/' + encodeURIComponent(g.slug) + '/feature');
+        else await adm('POST', '/admin/games/' + encodeURIComponent(g.slug) + '/feature', {});
+        toast(g.featured ? t('adm.feat.unsetOk') : t('adm.feat.setOk'));
+        M.games = (await adm('GET', '/admin/games')).games; keepScroll(render);
+      } catch (e) { toast(errText(e), 'error'); }
     }
     async function reorder(next) {
       M.games = next; keepScroll(render);
@@ -134,6 +143,11 @@
       }
       return { name: g.name, slug: g.slug, accent: g.accent, price: String(g.priceCents / 100).replace('.', ','), version: g.version, sizeMb: String(g.sizeMb || 0), languages: (g.languages || []).join(', '), os: g.requirements.os || '', exe: (g.download && g.download.exe) || '', gamehubId: g.gamehubId || '', i18n };
     }
+    function featState(g) {
+      const text = {};
+      for (const l of LANGS) text[l] = (g.featuredText && g.featuredText[l]) || '';
+      return { lang: 'fr', text, until: g.featuredUntil ? String(g.featuredUntil).slice(0, 10) : '' };
+    }
     async function openEditor(slug) {
       if (!canLeave()) return;
       try {
@@ -141,7 +155,7 @@
         const f = formOf(g);
         let fsStatus = g.firestore || { configured: false, enabled: false };
         try { fsStatus = (await adm('GET', '/admin/games/' + encodeURIComponent(slug) + '/firestore')).firestore; } catch (_) { /* statut détaillé facultatif */ }
-        M.edit = { game: g, f, lang: 'fr', dirty: false, uploads: [], buildUp: null, slugTouched: f.slug !== slugify(f.name), fs: { st: fsStatus, msg: null, busy: false }, gh: { loading: true } };
+        M.edit = { game: g, f, feat: featState(g), lang: 'fr', dirty: false, uploads: [], buildUp: null, slugTouched: f.slug !== slugify(f.name), fs: { st: fsStatus, msg: null, busy: false }, gh: { loading: true } };
         M.preview = null; M.tab = 'games'; S.tab = 'admin';
         render(); const m = document.querySelector('.main'); if (m) m.scrollTop = 0;
         loadGamehub(M.edit, false);
@@ -260,6 +274,7 @@
             fld(t('adm.f.os'), h('input', { type: 'text', maxlength: 80, ...bind('os') })),
             fld(t('adm.f.languages'), h('input', { type: 'text', ...bind('languages') }), t('adm.f.languagesHint')))),
         textsPanel(E),
+        featuredPanel(E),
         mediaPanel(E),
         buildPanel(E, bind),
         gamehubPanel(E),
@@ -287,6 +302,33 @@
           list('features', t('adm.f.features'), 12),
           list('howItWorks', t('adm.f.howItWorks'), 6, t('adm.f.howHint')),
           fld(t('adm.f.needs'), h('input', { type: 'text', maxlength: 200, value: d.needs, oninput: (ev) => { d.needs = ev.target.value; touch(); } }))));
+    }
+
+    // ---------- Jeu à la une ----------
+    function featuredPanel(E) {
+      const g = E.game, F = E.feat, base = '/admin/games/' + encodeURIComponent(g.slug) + '/feature';
+      const redraw = () => keepScroll(render);
+      const run = async (fn, okMsg) => {
+        try { const r = await fn(); E.game = r.game; E.feat = featState(r.game); toast(okMsg); redraw(); } catch (e) { toast(errText(e), 'error'); }
+      };
+      const published = g.status === 'published';
+      const tabsEl = h('div', { class: 'ltabs', role: 'tablist' }, LANGS.map((l) => h('button', { type: 'button', role: 'tab', class: 'ltab' + (F.lang === l ? ' on' : ''), 'aria-selected': String(F.lang === l), 'data-flang': l, onclick: () => { F.lang = l; redraw(); } }, LANG_NAMES[l])));
+      const apply = () => {
+        const text = {};
+        for (const l of LANGS) { const v = F.text[l].trim(); if (v) text[l] = v; }
+        return run(() => adm('POST', base, { featuredText: text, until: F.until || null }), t('adm.feat.setOk'));
+      };
+      return h('section', { class: 'panel wide', id: 'feat-panel' }, h('h2', { class: 'ptitle' }, t('adm.feat.title')),
+        h('p', { class: 'sub' }, t('adm.feat.hint')),
+        !published ? h('div', { class: 'warn' }, t('adm.feat.needPublish')) : [
+          g.featured ? h('div', { class: 'featnote' }, h('span', { class: 'chip st pub' }, '\u2605 ' + t('adm.feat.on')), g.featuredUntil ? h('small', {}, t('adm.feat.until.on', { date: fmtDate(String(g.featuredUntil).slice(0, 10) + 'T12:00:00') })) : null) : null,
+          tabsEl,
+          h('div', { class: 'stack' },
+            fld(t('adm.feat.text') + ' · ' + LANG_NAMES[F.lang], h('input', { type: 'text', id: 'feat-text', maxlength: 90, value: F.text[F.lang], placeholder: ((E.f.i18n[F.lang] || {}).tagline || '').slice(0, 90), oninput: (ev) => { F.text[F.lang] = ev.target.value; } })),
+            fld(t('adm.feat.until'), h('input', { type: 'date', id: 'feat-until', value: F.until, oninput: (ev) => { F.until = ev.target.value; } })),
+            h('div', { class: 'row' },
+              h('button', { class: 'btn primary', type: 'button', id: 'feat-apply', onclick: apply }, g.featured ? t('adm.feat.apply') : t('adm.feat.set')),
+              g.featured ? h('button', { class: 'btn', type: 'button', id: 'feat-remove', onclick: () => run(() => adm('DELETE', base), t('adm.feat.unsetOk')) }, t('adm.feat.unset')) : null))]);
     }
 
     // ---------- GameHub : licences automatiques ----------

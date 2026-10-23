@@ -93,7 +93,13 @@
     admin: adminApi,
     getState: () => R({ loggedIn: q.get('view') !== 'auth', user, demo: true, reachable: true, demoAvailable: true, dev: q.get('dev') === '1', apiUrl: 'https://papouth.dupas.pro/api/store', version: '1.0.0' }),
     login: () => R({ user }), register: () => R({ user }), logout: () => R(true), startDemo: () => R({ user }),
-    catalog: async (lang) => { const gs = gamesFor(lang || 'fr'); games.splice(0, games.length, ...gs); await loadMedia(); return { ok: true, data: { games } }; }, entitlements: () => R(ent),
+    catalog: async (lang) => {
+      const gs = gamesFor(lang || 'fr'); games.splice(0, games.length, ...gs); await loadMedia();
+      const fs = q.get('featured'); // ?featured=<slug> : ce jeu est « à la une » (placé en premier, comme l'API)
+      const fi = games.findIndex((g) => g.slug === fs);
+      if (fi >= 0) { games[fi].featured = true; games[fi].featuredText = q.get('ftext') || games[fi].tagline; games.unshift(...games.splice(fi, 1)); }
+      return { ok: true, data: { games } };
+    }, entitlements: () => R(ent),
     checkout: () => R({ url: null }), billingPortal: () => R({ url: null }),
     cancelSubscription: () => { ent = { ...ent, pass: { ...ent.pass, cancelAtPeriodEnd: true } }; return R({ pass: ent.pass }); },
     resumeSubscription: () => {

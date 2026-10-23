@@ -152,6 +152,7 @@
   'adm.preview.note': 'Tal como lo verán los jugadores (incluye cambios sin guardar).',
   'adm.preview.close': 'Cerrar vista previa',
   'adm.sec.general': 'Información general',
+  'adm.feat.title': 'Juego destacado', 'feat.badge': 'Destacado', 'feat.view': 'Ver página', 'adm.feat.set': 'Destacar este juego', 'adm.feat.unset': 'Quitar de destacados', 'adm.sec.feat': 'Destacado', 'adm.feat.hint': 'Un solo juego a la vez, en grande en la tienda del launcher y en la web. Si dejas el texto vacío se usa el eslogan del juego.', 'adm.feat.text': 'Frase destacada (90 caracteres máx.)', 'adm.feat.until': 'Fin automático (opcional)', 'adm.feat.apply': 'Actualizar', 'adm.feat.needPublish': 'Publica primero el juego para poder destacarlo.', 'adm.feat.on': 'Este juego está destacado ahora.', 'adm.feat.setOk': 'Juego destacado.', 'adm.feat.unsetOk': 'Juego quitado de destacados.', 'adm.feat.until.on': 'hasta el {date}',
   'adm.sec.texts': 'Textos por idioma',
   'adm.sec.media': 'Imágenes y vídeos',
   'adm.sec.build': 'Versión del juego',

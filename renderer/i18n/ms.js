@@ -152,6 +152,7 @@
   'adm.preview.note': 'Seperti yang pemain akan lihat (termasuk perubahan belum disimpan).',
   'adm.preview.close': 'Tutup pratonton',
   'adm.sec.general': 'Maklumat am',
+  'adm.feat.title': 'Permainan pilihan', 'feat.badge': 'Pilihan Utama', 'feat.view': 'Lihat halaman', 'adm.feat.set': 'Jadikan pilihan utama', 'adm.feat.unset': 'Keluarkan daripada pilihan utama', 'adm.sec.feat': 'Pilihan Utama', 'adm.feat.hint': 'Satu permainan pada satu masa, dipaparkan besar di kedai pelancar dan di laman web. Biarkan kosong untuk guna slogan permainan.', 'adm.feat.text': 'Ayat sorotan (maks. 90 aksara)', 'adm.feat.until': 'Tarikh tamat automatik (pilihan)', 'adm.feat.apply': 'Kemas kini', 'adm.feat.needPublish': 'Terbitkan permainan dahulu untuk menjadikannya pilihan utama.', 'adm.feat.on': 'Permainan ini sedang menjadi pilihan utama.', 'adm.feat.setOk': 'Permainan dijadikan pilihan utama.', 'adm.feat.unsetOk': 'Permainan dikeluarkan daripada pilihan utama.', 'adm.feat.until.on': 'sehingga {date}',
   'adm.sec.texts': 'Teks mengikut bahasa',
   'adm.sec.media': 'Imej dan video',
   'adm.sec.build': 'Binaan permainan',

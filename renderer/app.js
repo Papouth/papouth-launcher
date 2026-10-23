@@ -270,6 +270,39 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     return cmpVer(inst.version, g.version) < 0 ? 'update' : 'play';
   }
 
+  // ----- Jeu à la une : grande bannière au-dessus du bloc Game Pass -----
+  const reducedMotion = () => { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } };
+  function featuredBanner() {
+    const g = S.games.find((x) => x.featured);
+    if (!g) return null;
+    const media = g.media || [];
+    const shot = media.find((m) => m.type === 'image');
+    const trailer = media.find((m) => m.type === 'video');
+    const poster = g.image || (shot && shot.url) || (trailer && trailer.thumb) || '';
+    const state = gameState(g);
+    const accKey = { 'paintball-master': 'pink', 'pop-riot': 'yellow', 'boys-girls-ultimate': 'blue' }[g.slug];
+    const bg = poster ? 'url("' + poster.replace(/["\\()]/g, '') + '")' : 'none';
+    let video = null;
+    if (trailer && !reducedMotion()) {
+      video = h('video', { src: trailer.url, poster: poster || trailer.thumb || null, muted: true, loop: true, autoplay: true, playsinline: true, preload: 'metadata', 'aria-hidden': 'true', tabindex: '-1' });
+      video.muted = true;
+      video.addEventListener('canplay', () => { const pr = video.play(); if (pr && pr.catch) pr.catch(() => {}); }, { once: true });
+    }
+    const meta = state === 'locked'
+      ? h('div', { class: 'price-big' }, money(g.price || 40), h('small', {}, t('sale.once')))
+      : h('div', { class: 'spot-state' }, h('span', { class: 'badge' }, isOwned(g) ? t('tag.lifetime') : t('tag.pass')));
+    const actions = actionsFor(g, 'store');
+    actions.append(h('button', { class: 'btn ghost sm spot-view', type: 'button', onclick: () => openSale(g.slug) }, t('feat.view')));
+    return h('section', { class: 'spot', id: 'featured-banner', 'data-accent': accKey, 'aria-label': t('feat.badge') + ' : ' + g.name, style: '--ac-raw:' + (/^#[0-9a-f]{3,8}$/i.test(g.accent) ? g.accent : '#7A3CFF') },
+      h('div', { class: 'spot-media', style: 'background-image:' + bg, onclick: (ev) => { if (!ev.target.closest('button,a')) openSale(g.slug); } },
+        poster ? null : h('span', { class: 'cname' }, g.name), video),
+      h('div', { class: 'spot-body' },
+        h('span', { class: 'badge spot-badge' }, '\u2605 ' + t('feat.badge')),
+        h('h2', { class: 'spot-name' }, g.name),
+        h('p', { class: 'spot-text' }, g.featuredText || g.tagline),
+        meta, actions));
+  }
+
   // ----- Boutique -----
   function storeView() {
     const plan = (id, name, price, unit, note, best) => h('div', { class: 'plan' + (best ? ' best' : '') },
@@ -278,7 +311,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       h('div', { class: 'note' }, note),
       h('button', { class: 'btn primary', disabled: passActive() && !(S.ent.pass.cancelAtPeriodEnd && S.ent.pass.provider === 'paypal'), onclick: () => payModal({ product: id, title: t('pay.passTitle', { plan: name }), price: price + unit }) }, (passActive() && !(S.ent.pass.cancelAtPeriodEnd && S.ent.pass.provider === 'paypal')) ? t('store.already') : t('store.choose', { plan: name.toLocaleLowerCase(window.I18N.lang()) })));
     return h('div', {},
-      !S.reachable && !S.demo ? null : null,
+      featuredBanner(),
       h('section', { class: 'hero' },
         h('h1', {}, t('store.passTitle')), h('p', { class: 'sub' }, t('store.passSub')),
         h('div', { class: 'plans' },

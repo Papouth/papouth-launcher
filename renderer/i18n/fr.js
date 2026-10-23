@@ -152,6 +152,7 @@
   'adm.preview.note': 'Tel que les joueurs le verront (modifications non enregistrées comprises).',
   'adm.preview.close': 'Fermer l\'aperçu',
   'adm.sec.general': 'Informations générales',
+  'adm.feat.title': 'Jeu à la une', 'feat.badge': 'À la une', 'feat.view': 'Voir la page', 'adm.feat.set': 'Mettre à la une', 'adm.feat.unset': 'Retirer de la une', 'adm.sec.feat': 'À la une', 'adm.feat.hint': 'Un seul jeu à la fois, affiché en grand sur la boutique du launcher et sur le site. Phrase d\'accroche vide : l\'accroche du jeu est reprise.', 'adm.feat.text': 'Phrase à la une (90 caractères max)', 'adm.feat.until': 'Fin automatique (facultatif)', 'adm.feat.apply': 'Mettre à jour', 'adm.feat.needPublish': 'Publiez d\'abord le jeu pour pouvoir le mettre à la une.', 'adm.feat.on': 'Ce jeu est actuellement à la une.', 'adm.feat.setOk': 'Jeu mis à la une.', 'adm.feat.unsetOk': 'Jeu retiré de la une.', 'adm.feat.until.on': 'jusqu\'au {date}',
   'adm.sec.texts': 'Textes par langue',
   'adm.sec.media': 'Images et vidéos',
   'adm.sec.build': 'Version du jeu',
