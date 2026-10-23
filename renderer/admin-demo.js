@@ -22,7 +22,7 @@
         slug: g.slug, name: g.name, accent: String(g.accent).toLowerCase(), priceCents: Math.round(g.price * 100), version: g.version, sizeMb: g.sizeMb, status: 'published', sortOrder: i,
         i18n, languages: g.languages, requirements: { os: g.requirements.os, needs }, coverUrl: g.image || '', coverPath: g.image || '', media,
         download: { mode: 'upload', exe: g.name.replace(/[^A-Za-z0-9]/g, '') + '.exe', hasBuild: true, sha256: rid() + rid() + rid() + rid() + rid() + rid() + rid() + rid(), size: g.sizeMb * 1048576, uploadedAt: Date.now() - 864e5 * (i + 3), originalName: g.slug + '.zip' },
-        firestore: { configured: false, enabled: false },
+        firestore: { configured: false, enabled: false }, gamehubId: null,
         stripeProductId: null, stripePriceId: null, createdAt: now(), updatedAt: now()
       });
     });
@@ -38,9 +38,10 @@
       { id: 'u3', email: 'ma***@outlook.fr', tiktok: 'max_gaming', role: 'player', createdAt: now(), pass: { active: false, plan: null, provider: null, renewsAt: null, cancelAtPeriodEnd: false }, owned: ['pop-riot'], devices: 1 },
       { id: 'u4', email: 'th***@hotmail.com', tiktok: 'thai_streamer', role: 'player', createdAt: now(), pass: { active: true, plan: 'yearly', provider: 'paypal', renewsAt: new Date(Date.now() + 200 * 864e5).toISOString(), cancelAtPeriodEnd: false }, owned: ['paintball-master'], devices: 1 }
     ];
-    users.forEach((u) => { u.legacy = []; u.firestore = []; });
+    users.forEach((u) => { u.legacy = []; u.firestore = []; u.gamehub = []; });
     users[2].legacy = [{ slug: games[0].slug, claimed: false }];
     users[1].firestore = [{ slug: games[1].slug, docId: users[1].tiktok, state: 'synced', lastError: null, syncedAt: now() }, { slug: games[0].slug, docId: users[1].tiktok, state: 'external', lastError: null, syncedAt: now() }];
+    users[1].gamehub = [{ slug: games[1].slug, gamehubId: games[1].slug, handle: users[1].tiktok, state: 'synced', retries: 0, lastError: null, syncedAt: now() }, { slug: games[0].slug, gamehubId: games[0].slug, handle: users[1].tiktok, state: 'external', retries: 0, lastError: null, syncedAt: now() }];
     const log = [];
     const audit = (action, target, detail) => log.unshift({ id: rid(), actor: 'de***@papouth.com', action, target: target || null, detail: detail || null, at: now() });
     const find = (slug) => { const g = games.find((x) => x.slug === slug); if (!g) throw err('unknown_game', 'Jeu introuvable.'); return g; };
@@ -55,6 +56,7 @@
       if (b.version !== undefined) { if (!/^[0-9A-Za-z][0-9A-Za-z.+_-]{0,31}$/.test(b.version)) throw err('invalid_field', 'Version invalide (ex. 1.2.0).'); g.version = b.version; }
       if (b.sizeMb !== undefined) g.sizeMb = Math.max(0, Math.round(Number(b.sizeMb) || 0));
       if (b.languages !== undefined) g.languages = b.languages;
+      if (b.gamehubId !== undefined) { if (b.gamehubId && b.gamehubId !== '-' && !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(b.gamehubId)) throw err('invalid_field', 'ID du jeu dans GameHub invalide.'); g.gamehubId = b.gamehubId || null; }
       if (b.i18n) for (const [l, d] of Object.entries(b.i18n)) g.i18n[l] = { ...(g.i18n[l] || {}), ...d };
       if (b.requirements) {
         if (b.requirements.os !== undefined) g.requirements.os = b.requirements.os;
@@ -243,6 +245,23 @@
           if (b.grant === 'lifetime' && !x.owned.includes(b.slug)) x.owned.push(b.slug);
           audit('legacy.claim', x.email, b.slug + ' @' + x.tiktok);
           return { ok: true, pass: x.pass, owned: x.owned };
+        }
+        case 'GET gamehub :slug': { // /admin/gamehub/games
+          const list = [{ id: 'pop-riot', name: 'Pop Riot' }, { id: 'paintball-master', name: 'Paintball Master' }, { id: 'bgu', name: 'Boys & Girls Ultimate' }];
+          return { configured: true, url: 'https://hub.dupas.pro', games: list, mapping: Object.fromEntries(games.map((g) => [g.slug, g.gamehubId === '-' ? null : g.gamehubId || (list.find((x) => x.id === g.slug) || {}).id || null])), error: null };
+        }
+        case 'POST gamehub :slug': { // /admin/gamehub/resync-all
+          if (seg[1] !== 'resync-all') break;
+          users.forEach((x) => (x.gamehub || []).forEach((r) => { r.state = r.state === 'error' ? 'synced' : r.state; r.lastError = null; r.syncedAt = now(); }));
+          audit('gamehub.resync-all', null, users.length + ' joueur(s)');
+          return { ok: true, users: users.length, errors: 0 };
+        }
+        case 'POST users :slug gamehub :id': {
+          const x = users.find((y) => y.id === seg[1]);
+          if (!x) throw err('user_not_found', 'Utilisateur introuvable.');
+          (x.gamehub || []).forEach((r) => { r.state = r.state === 'error' ? 'synced' : r.state; r.lastError = null; r.syncedAt = now(); });
+          audit('gamehub.resync', x.email);
+          return { ok: true, gamehub: JSON.parse(JSON.stringify(x.gamehub || [])) };
         }
         case 'POST users :slug firestore :id': {
           const x = users.find((y) => y.id === seg[1]);

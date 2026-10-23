@@ -132,7 +132,7 @@
         const d = g.i18n[l] || {};
         i18n[l] = { tagline: d.tagline || '', description: d.description || '', features: [...(d.features || [])], howItWorks: pad3(d.howItWorks), needs: (g.requirements.needs && g.requirements.needs[l]) || '' };
       }
-      return { name: g.name, slug: g.slug, accent: g.accent, price: String(g.priceCents / 100).replace('.', ','), version: g.version, sizeMb: String(g.sizeMb || 0), languages: (g.languages || []).join(', '), os: g.requirements.os || '', exe: (g.download && g.download.exe) || '', i18n };
+      return { name: g.name, slug: g.slug, accent: g.accent, price: String(g.priceCents / 100).replace('.', ','), version: g.version, sizeMb: String(g.sizeMb || 0), languages: (g.languages || []).join(', '), os: g.requirements.os || '', exe: (g.download && g.download.exe) || '', gamehubId: g.gamehubId || '', i18n };
     }
     async function openEditor(slug) {
       if (!canLeave()) return;
@@ -141,10 +141,19 @@
         const f = formOf(g);
         let fsStatus = g.firestore || { configured: false, enabled: false };
         try { fsStatus = (await adm('GET', '/admin/games/' + encodeURIComponent(slug) + '/firestore')).firestore; } catch (_) { /* statut détaillé facultatif */ }
-        M.edit = { game: g, f, lang: 'fr', dirty: false, uploads: [], buildUp: null, slugTouched: f.slug !== slugify(f.name), fs: { st: fsStatus, msg: null, busy: false } };
+        M.edit = { game: g, f, lang: 'fr', dirty: false, uploads: [], buildUp: null, slugTouched: f.slug !== slugify(f.name), fs: { st: fsStatus, msg: null, busy: false }, gh: { loading: true } };
         M.preview = null; M.tab = 'games'; S.tab = 'admin';
         render(); const m = document.querySelector('.main'); if (m) m.scrollTop = 0;
+        loadGamehub(M.edit, false);
       } catch (e) { toast(errText(e), 'error'); }
+    }
+    // Jeux du GameHub (menu « ID du jeu dans GameHub ») : chargé après l'ouverture pour ne pas retarder l'éditeur
+    async function loadGamehub(E, refresh) {
+      E.gh = { ...(E.gh || {}), loading: true };
+      if (refresh && M.edit === E) keepScroll(render);
+      try { const r = await adm('GET', '/admin/gamehub/games' + (refresh ? '?refresh=1' : '')); E.gh = { loading: false, configured: !!r.configured, games: r.games || [], mapping: r.mapping || {}, error: r.error || null }; }
+      catch (e) { E.gh = { loading: false, configured: true, games: [], mapping: {}, error: errText(e) }; }
+      if (M.edit === E) keepScroll(render);
     }
     async function closeEditor() {
       if (!canLeave()) return;
@@ -165,7 +174,7 @@
       return {
         name: f.name.trim(), ...(g.status === 'draft' && f.slug !== g.slug ? { slug: f.slug.trim() } : {}), accent: f.accent, priceCents: price, version: f.version.trim(),
         sizeMb: Number(f.sizeMb) || 0, languages: f.languages.split(',').map((x) => x.trim()).filter(Boolean),
-        requirements: { os: f.os.trim(), needs }, i18n, ...(f.exe.trim() ? { download: { exe: f.exe.trim() } } : {})
+        requirements: { os: f.os.trim(), needs }, i18n, gamehubId: f.gamehubId || null, ...(f.exe.trim() ? { download: { exe: f.exe.trim() } } : {})
       };
     }
     async function save() {
@@ -253,6 +262,7 @@
         textsPanel(E),
         mediaPanel(E),
         buildPanel(E, bind),
+        gamehubPanel(E),
         firestorePanel(E));
     }
 
@@ -277,6 +287,27 @@
           list('features', t('adm.f.features'), 12),
           list('howItWorks', t('adm.f.howItWorks'), 6, t('adm.f.howHint')),
           fld(t('adm.f.needs'), h('input', { type: 'text', maxlength: 200, value: d.needs, oninput: (ev) => { d.needs = ev.target.value; touch(); } }))));
+    }
+
+    // ---------- GameHub : licences automatiques ----------
+    function gamehubPanel(E) {
+      const g = E.game, f = E.f, G = E.gh || { loading: true };
+      const list = G.games || [];
+      const resolved = G.mapping && G.mapping[g.slug];
+      const sel = h('select', { id: 'gh-select', 'aria-label': t('gh.field'), disabled: !!G.loading || G.configured === false, onchange: (ev) => { f.gamehubId = ev.target.value; touch(); keepScroll(render); } },
+        h('option', { value: '' }, t('gh.auto')), h('option', { value: '-' }, t('gh.none')),
+        list.map((x) => h('option', { value: x.id }, x.name + ' (' + x.id + ')')),
+        f.gamehubId && f.gamehubId !== '-' && !list.some((x) => x.id === f.gamehubId) ? h('option', { value: f.gamehubId }, f.gamehubId + ' ' + t('gh.unknownId')) : null);
+      sel.value = f.gamehubId || '';
+      const note = G.loading ? t('gh.loading') : G.configured === false ? t('gh.notConfigured')
+        : f.gamehubId === '-' ? t('gh.noneNote')
+        : f.gamehubId ? null
+        : resolved ? t('gh.resolved', { id: resolved }) : t('gh.unresolved');
+      return h('section', { class: 'panel wide', id: 'gh-panel' }, h('h2', { class: 'ptitle' }, t('gh.title')), h('p', { class: 'sub' }, t('gh.hint')),
+        fld(t('gh.field'), h('div', { class: 'row' }, sel,
+          G.configured === false ? null : h('button', { class: 'btn sm ghost', type: 'button', id: 'gh-refresh', disabled: !!G.loading, onclick: () => loadGamehub(E, true) }, t('gh.refresh')))),
+        note ? h('p', { class: 'fsline', id: 'gh-note' }, note) : null,
+        G.error ? h('div', { class: 'fsmsg bad', id: 'gh-error', role: 'status' }, t('gh.error', { msg: G.error })) : null);
     }
 
     // ---------- ancien système de licences (Firestore) ----------
@@ -461,9 +492,10 @@
         h('div', { class: 'uinfo' }, h('b', {}, u.email || '—'), h('small', {}, '@' + u.tiktok + (u.role === 'admin' ? ' · ' + t('adm.role.admin') : ''))),
         h('div', { class: 'uown' }, u.pass && u.pass.active ? h('span', { class: 'chip' }, t('adm.users.pass') + ' · ' + (u.pass.provider === 'admin' ? t('adm.users.gifted') : u.pass.plan === 'yearly' ? t('plan.yearly') : t('plan.monthly'))) : null,
           (u.owned || []).map((s) => h('span', { class: 'chip alt' }, gameName(s))), !(u.pass && u.pass.active) && !(u.owned || []).length ? h('small', {}, t('adm.users.nothing')) : null,
-          legacyBadge(u), (u.firestore || []).map((r) => h('span', { class: 'chip st fs-' + r.state, title: r.lastError || '', 'data-fs': r.slug }, 'Firestore · ' + gameName(r.slug) + ' · ' + t('fs.sync.state.' + r.state)))),
+          legacyBadge(u), (u.firestore || []).map((r) => h('span', { class: 'chip st fs-' + r.state, title: r.lastError || '', 'data-fs': r.slug }, 'Firestore · ' + gameName(r.slug) + ' · ' + t('fs.sync.state.' + r.state))),
+          (u.gamehub || []).map((r) => h('span', { class: 'chip st fs-' + r.state, title: r.lastError || '', 'data-gh': r.slug }, 'GameHub · ' + gameName(r.slug) + ' · ' + t('gh.state.' + r.state)))),
         h('div', { class: 'row' },
-          (u.firestore || []).length || (u.legacy || []).length ? h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resyncUser(u) }, t('fs.sync.resync')) : null,
+          (u.firestore || []).length || (u.legacy || []).length || (u.gamehub || []).length ? h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resyncUser(u) }, t('fs.sync.resync')) : null,
           (u.legacy || []).some((l) => !l.claimed) ? h('button', { class: 'btn sm', type: 'button', onclick: () => claimModal(u) }, t('fs.users.claim')) : null,
           h('button', { class: 'btn sm', type: 'button', onclick: () => grantGameModal(u) }, t('adm.users.giveGame')),
           h('button', { class: 'btn sm', type: 'button', onclick: () => grantPassModal(u) }, t('adm.users.givePass')),
@@ -471,13 +503,21 @@
           h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resetDeviceModal(u) }, t('adm.users.resetDevice')),
           h('button', { class: 'btn sm ghost', type: 'button', id: 'reset-link-' + u.id, onclick: () => resetLinkModal(u) }, t('adm.users.resetLink')))));
       return h('div', { class: 'adm' }, head(t('adm.users.title'), t('adm.users.sub')),
-        h('div', { class: 'row searchrow' }, q, h('button', { class: 'btn', type: 'button', onclick: go }, t('adm.search'))),
+        h('div', { class: 'row searchrow' }, q, h('button', { class: 'btn', type: 'button', onclick: go }, t('adm.search')),
+          h('button', { class: 'btn ghost', type: 'button', id: 'gh-resync-all', onclick: resyncAllGamehub }, t('gh.resyncAll'))),
         M.users == null ? h('div', { class: 'empty' }, t('adm.loading')) : rows.length ? h('div', { class: 'ulist' }, rows) : h('div', { class: 'empty' }, t('adm.users.none')));
     }
     const legacyBadge = (u) => ((u.legacy || []).length
       ? h('span', { class: 'chip alt legacy', title: t('fs.claim.hint') }, t('fs.users.legacy', { games: u.legacy.map((l) => gameName(l.slug) + (l.claimed ? ' (' + t('fs.claim.linked') + ')' : '')).join(', ') })) : null);
     async function resyncUser(u) {
-      try { await adm('POST', '/admin/users/' + encodeURIComponent(u.id) + '/firestore/sync'); toast(t('fs.sync.done')); await load('users'); } catch (e) { toast(errText(e), 'error'); }
+      try {
+        if ((u.firestore || []).length || (u.legacy || []).length) await adm('POST', '/admin/users/' + encodeURIComponent(u.id) + '/firestore/sync');
+        if ((u.gamehub || []).length) await adm('POST', '/admin/users/' + encodeURIComponent(u.id) + '/gamehub/sync');
+        toast(t('fs.sync.done')); await load('users');
+      } catch (e) { toast(errText(e), 'error'); }
+    }
+    async function resyncAllGamehub() {
+      try { const r = await adm('POST', '/admin/gamehub/resync-all'); toast(t('gh.resyncAllDone', { n: r.users })); await load('users'); } catch (e) { toast(errText(e), 'error'); }
     }
     async function claimModal(u) {
       await ensureGames();
