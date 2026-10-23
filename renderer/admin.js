@@ -735,15 +735,18 @@
       const card = (id, name, p, rows) => {
         const mode = p.configured && p.mode ? (p.mode === 'live' ? 'live' : 'test') : 'none';
         const stateOf = (ok) => (ok ? 'ok' : p.configured && p.lastError ? 'bad' : 'warn');
-        return h('section', { class: 'panel pay', id: 'pay-' + id },
-          h('div', { class: 'pay-head' }, h('h2', { class: 'ptitle' }, name),
-            h('span', { class: 'pmode ' + mode, 'data-mode': mode, title: t('adm.pay.modeHint.' + mode) }, t('adm.pay.mode.' + mode))),
-          h('p', { class: 'sub' }, t('adm.pay.modeHint.' + mode)),
+        const all = p.configured && rows.every((r) => r[2]);
+        const overall = p.configured && p.lastError ? 'bad' : all ? 'ok' : 'warn';
+        return h('section', { class: 'panel pcard ' + overall, id: 'pay-' + id, 'data-state': overall },
+          h('div', { class: 'pcard-head' }, h('h2', { class: 'ptitle' }, name),
+            h('span', { class: 'pmode ' + mode, 'data-mode': mode }, t('adm.pay.mode.' + mode)),
+            h('span', { class: 'pchip pstate ' + overall }, t('adm.pay.status.' + (overall === 'ok' ? 'ok' : overall === 'bad' ? 'err' : 'todo')))),
+          h('p', { class: 'pcard-hint' }, t('adm.pay.modeHint.' + mode)),
           h('div', { class: 'prows' }, rows.map(([key, label, ok, detail]) => h('div', { class: 'prow', 'data-row': key }, h('span', { class: 'plab' }, label, detail ? h('small', {}, ' ' + detail) : null), chipFor(stateOf(ok))))),
-          p.lastError ? h('p', { class: 'perr', role: 'alert' }, t('adm.pay.lastError') + ' : ' + p.lastError) : null,
-          h('small', { class: 'sub' }, t('adm.pay.lastRun') + ' : ' + (p.lastRun ? new Date(p.lastRun).toLocaleString(window.I18N.lang()) : t('adm.pay.never'))));
+          p.lastError ? h('div', { class: 'perr', role: 'alert' }, h('b', { class: 'perr-lab' }, t('adm.pay.lastError')), h('pre', { class: 'perr-msg' }, String(p.lastError))) : null,
+          h('small', { class: 'pcard-foot' }, t('adm.pay.lastRun') + ' : ' + (p.lastRun ? new Date(p.lastRun).toLocaleString(window.I18N.lang()) : t('adm.pay.never'))));
       };
-      const cards = !P ? h('div', { class: 'empty' }, t('adm.loading')) : h('div', { class: 'pay-grid' },
+      const cards = !P ? h('div', { class: 'empty' }, t('adm.loading')) : h('div', { class: 'pay-wrap' }, h('div', { class: 'pay-grid' },
         card('stripe', 'Stripe', P.stripe, [
           ['key', t('adm.pay.row.key'), !!(P.stripe.keys && P.stripe.keys.secretKey)],
           ['prices', t('adm.pay.row.prices'), !!(P.stripe.prices && P.stripe.prices.ok), P.stripe.prices && P.stripe.configured ? t('adm.pay.prices.n', { done: P.stripe.prices.done, total: P.stripe.prices.total }) : ''],
@@ -752,7 +755,7 @@
         card('paypal', 'PayPal', P.paypal, [
           ['key', t('adm.pay.row.key'), !!(P.paypal.keys && P.paypal.keys.clientId && P.paypal.keys.clientSecret)],
           ['plans', t('adm.pay.row.plans'), !!(P.paypal.plans && P.paypal.plans.ok), P.paypal.plans && P.paypal.configured ? t('adm.pay.plans.n', { done: P.paypal.plans.done, total: P.paypal.plans.total }) : ''],
-          ['webhook', t('adm.pay.row.webhook'), !!(P.paypal.webhook && P.paypal.webhook.ok)]]));
+          ['webhook', t('adm.pay.row.webhook'), !!(P.paypal.webhook && P.paypal.webhook.ok)]])));
       const help = h('section', { class: 'panel wide pay-help', id: 'pay-help' }, h('h2', { class: 'ptitle' }, t('adm.pay.help.title')),
         h('ol', {}, ['stripe', 'paypal', 'after', 'live'].map((k) => h('li', {}, t('adm.pay.help.' + k)))));
       return h('div', { class: 'adm' },
