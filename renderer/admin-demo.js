@@ -44,6 +44,7 @@
     users[1].firestore = [{ slug: games[1].slug, docId: users[1].tiktok, state: 'synced', lastError: null, syncedAt: now() }, { slug: games[0].slug, docId: users[1].tiktok, state: 'external', lastError: null, syncedAt: now() }];
     users[1].gamehub = [{ slug: games[1].slug, gamehubId: games[1].slug, handle: users[1].tiktok, state: 'synced', retries: 0, lastError: null, syncedAt: now() }, { slug: games[0].slug, gamehubId: games[0].slug, handle: users[1].tiktok, state: 'external', retries: 0, lastError: null, syncedAt: now() }];
     const log = [];
+    let statsSince = null;
     const audit = (action, target, detail) => log.unshift({ id: rid(), actor: 'de***@papouth.com', action, target: target || null, detail: detail || null, at: now() });
     const find = (slug) => { const g = games.find((x) => x.slug === slug); if (!g) throw err('unknown_game', 'Jeu introuvable.'); return g; };
     const sorted = () => games.slice().sort((a, b) => a.sortOrder - b.sortOrder);
@@ -227,13 +228,31 @@
           return { ok: true, removed: n };
         }
         case 'GET stats': {
-          const sales = Object.fromEntries(games.map((g) => [g.slug, users.filter((x) => x.owned.includes(g.slug)).length]));
-          const plan = (p) => users.filter((x) => x.pass.active && x.pass.plan === p).length;
+          // Démo : toutes les données sont « avant » une remise à zéro éventuelle ; les paiements sont encore en mode test (bandeau affiché)
+          const on = !statsSince;
+          const pool = users.filter((x) => x.role !== 'admin' && !x.isTest);
+          const sales = Object.fromEntries(games.map((g) => [g.slug, on ? users.filter((x) => x.owned.includes(g.slug) && (x.origins || {})[g.slug] !== 'admin').length : 0]));
+          const plan = (p) => (on ? pool.filter((x) => x.pass.active && x.pass.plan === p).length : 0);
+          const revenue = 30 * plan('monthly') + 40 * Object.values(sales).reduce((a, c) => a + c, 0);
+          const gifted = Object.fromEntries(games.map((g) => [g.slug, on ? users.filter((x) => (x.origins || {})[g.slug] === 'admin').length : 0]));
           return {
-            users: users.length, activePasses: { monthly: plan('monthly'), yearly: plan('yearly') }, passesTotal: plan('monthly') + plan('yearly'),
-            lifetimeSales: sales, revenueMonthEur: 30 * plan('monthly') + 40 * Object.values(sales).reduce((a, c) => a + c, 0),
-            games: sorted().map((g) => ({ slug: g.slug, name: g.name, status: g.status, priceCents: g.priceCents, sales: sales[g.slug], granted: 0 }))
+            users: on ? pool.length : 0, activePasses: { monthly: plan('monthly'), yearly: plan('yearly') }, passesTotal: plan('monthly') + plan('yearly'), giftedPasses: 0,
+            lifetimeSales: sales, revenueMonthEur: revenue, revenueTotalEur: revenue, gifts: { passes: 0, games: Object.values(gifted).reduce((a, c) => a + c, 0) },
+            statsSince, currentPaymentMode: { stripe: 'test', paypal: 'test' },
+            games: sorted().map((g) => ({ slug: g.slug, name: g.name, status: g.status, priceCents: g.priceCents, sales: sales[g.slug], granted: gifted[g.slug] }))
           };
+        }
+        case 'POST stats :slug': {
+          if (seg[1] !== 'reset') break;
+          statsSince = new Date().toISOString(); audit('stats.reset', null, statsSince);
+          return { ok: true, statsSince };
+        }
+        case 'POST users :slug test-flag': {
+          const x = users.find((y) => y.id === seg[1]);
+          if (!x) throw err('user_not_found', 'Utilisateur introuvable.');
+          if (typeof b.isTest !== 'boolean') throw err('invalid_flag', 'isTest doit être vrai ou faux.');
+          x.isTest = b.isTest; audit(b.isTest ? 'user.test-flag.on' : 'user.test-flag.off', x.email);
+          return { ok: true, isTest: x.isTest };
         }
         case 'GET games :slug firestore': return { firestore: fsCounts(find(seg[1]).slug) };
         case 'PUT games :slug firestore': {

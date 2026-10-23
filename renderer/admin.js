@@ -14,7 +14,7 @@
   function create(ctx) {
     const { A, h, t, svg, S, render, call, toast, errText, money, fmtDate, saleView } = ctx;
     const adm = (method, path, body) => call(A.admin.call(method, path, body));
-    const M = { tab: 'games', games: null, edit: null, users: null, q: '', stats: null, log: null, pay: null, paying: false, preview: null, busy: false };
+    const M = { tab: 'games', games: null, edit: null, users: null, q: '', stats: null, resetArmed: false, log: null, pay: null, paying: false, preview: null, busy: false };
     let upSeq = 0;
 
     const ICONS = {
@@ -47,7 +47,7 @@
       try {
         if (tab === 'games') M.games = (await adm('GET', '/admin/games')).games;
         else if (tab === 'users') M.users = (await adm('GET', '/admin/users?q=' + encodeURIComponent(M.q))).users;
-        else if (tab === 'stats') M.stats = await adm('GET', '/admin/stats');
+        else if (tab === 'stats') { M.resetArmed = false; M.stats = await adm('GET', '/admin/stats'); }
         else if (tab === 'payments') M.pay = await adm('GET', '/admin/payments/status');
         else if (tab === 'log') M.log = (await adm('GET', '/admin/log?limit=200')).log;
       } catch (e) { toast(errText(e), 'error'); }
@@ -537,6 +537,7 @@
       if (hasSync(u)) items.push({ label: t('fs.sync.resync'), run: () => resyncUser(u) });
       if ((u.legacy || []).some((l) => !l.claimed)) items.push({ label: t('fs.users.claim'), run: () => claimModal(u) });
       items.push({ label: t('adm.users.resetDevice'), run: () => resetDeviceModal(u) });
+      items.push({ label: u.isTest ? t('adm.users.testUnmark') : t('adm.users.testMark'), run: () => toggleTest(u), id: 'test-flag-' + u.id });
       items.push({ label: t('adm.users.resetLink'), run: () => resetLinkModal(u), id: 'reset-link-' + u.id });
       items.push({ label: t('adm.rv.menu'), run: () => revokeModal(u), danger: true, id: 'revoke-menu-' + u.id });
       const menuId = 'umenu-' + u.id;
@@ -584,7 +585,7 @@
       const q = h('input', { type: 'search', id: 'user-q', placeholder: t('adm.users.search'), value: M.q, 'aria-label': t('adm.users.search'), onkeydown: (ev) => { if (ev.key === 'Enter') go(); } });
       const go = () => { M.q = q.value.trim(); load('users'); };
       const rows = (M.users || []).map((u) => h('div', { class: 'urow' },
-        h('div', { class: 'uinfo' }, h('b', {}, u.email || '—'), h('small', {}, '@' + u.tiktok + (u.role === 'admin' ? ' · ' + t('adm.role.admin') : ''))),
+        h('div', { class: 'uinfo' }, h('b', {}, u.email || '—'), h('small', {}, '@' + u.tiktok + (u.role === 'admin' ? ' · ' + t('adm.role.admin') : ''), u.isTest ? [' ', h('span', { class: 'chip st alt', 'data-test-badge': u.id }, t('adm.users.testBadge'))] : null)),
         h('div', { class: 'uown' }, u.pass && u.pass.active ? h('span', { class: 'chip' }, t('adm.users.pass') + ' · ' + (u.pass.provider === 'admin' ? t('adm.users.gifted') : u.pass.plan === 'yearly' ? t('plan.yearly') : t('plan.monthly'))) : null,
           (u.owned || []).map((s) => h('span', { class: 'chip alt' }, gameName(s))), !(u.pass && u.pass.active) && !(u.owned || []).length ? h('small', {}, t('adm.users.nothing')) : null,
           legacyBadge(u), (u.firestore || []).map((r) => h('span', { class: 'chip st fs-' + r.state, title: r.lastError || '', 'data-fs': r.slug }, 'Firestore · ' + gameName(r.slug) + ' · ' + t('fs.sync.state.' + r.state))),
@@ -606,6 +607,10 @@
         if ((u.gamehub || []).length) await adm('POST', '/admin/users/' + encodeURIComponent(u.id) + '/gamehub/sync');
         toast(t('fs.sync.done')); await load('users');
       } catch (e) { toast(errText(e), 'error'); }
+    }
+    async function toggleTest(u) {
+      try { await adm('POST', '/admin/users/' + encodeURIComponent(u.id) + '/test-flag', { isTest: !u.isTest }); toast(u.isTest ? t('adm.users.testUnmarked') : t('adm.users.testMarked')); await load('users'); }
+      catch (e) { toast(errText(e), 'error'); }
     }
     async function resyncAllGamehub() {
       try { const r = await adm('POST', '/admin/gamehub/resync-all'); toast(t('gh.resyncAllDone', { n: r.users })); await load('users'); } catch (e) { toast(errText(e), 'error'); }
@@ -710,16 +715,32 @@
       reload().then(draw).catch(() => {}); // données fraîches du serveur (accès + origines)
     }
     // ---------- statistiques ----------
+    async function resetStats() {
+      if (!M.resetArmed) { M.resetArmed = true; keepScroll(render); return; } // deuxième clic = confirmation
+      M.resetArmed = false;
+      try { await adm('POST', '/admin/stats/reset'); toast(t('adm.stats.resetDone')); await load('stats'); } catch (e) { toast(errText(e), 'error'); keepScroll(render); }
+    }
     function statsView() {
       const s = M.stats;
       const tile = (label, value) => h('div', { class: 'stat' }, h('small', {}, label), h('b', {}, value));
+      const num = window.I18N.num;
+      const pm = (s && s.currentPaymentMode) || {};
+      const testing = ['stripe', 'paypal'].filter((p) => pm[p] === 'test').map((p) => (p === 'stripe' ? 'Stripe' : 'PayPal'));
+      const resetBtn = M.resetArmed
+        ? h('div', { class: 'row' }, h('button', { class: 'btn sm danger', type: 'button', id: 'stats-reset-confirm', onclick: resetStats }, t('adm.stats.resetConfirm')), h('button', { class: 'btn sm ghost', type: 'button', onclick: () => { M.resetArmed = false; keepScroll(render); } }, t('adm.cancel')))
+        : h('button', { class: 'btn sm outline-danger', type: 'button', id: 'stats-reset', onclick: resetStats }, t('adm.stats.reset'));
       return h('div', { class: 'adm' }, head(t('adm.stats.title'), t('adm.stats.sub'), h('button', { class: 'btn ghost sm', type: 'button', onclick: () => load('stats') }, t('adm.refresh'))),
         !s ? h('div', { class: 'empty' }, t('adm.loading')) : [
-          h('div', { class: 'stats' }, tile(t('adm.stats.users'), window.I18N.num(s.users)), tile(t('adm.stats.passes'), window.I18N.num((s.passesTotal != null ? s.passesTotal : s.activePasses.monthly + s.activePasses.yearly))),
-            tile(t('adm.stats.monthly'), window.I18N.num(s.activePasses.monthly)), tile(t('adm.stats.yearly'), window.I18N.num(s.activePasses.yearly)), tile(t('adm.stats.revenue'), money(s.revenueMonthEur))),
+          testing.length ? h('div', { class: 'warn', id: 'stats-test-notice', role: 'status' }, t('adm.stats.testMode', { providers: testing.join(', ') })) : null,
+          h('div', { class: 'row statusrow' }, h('small', { id: 'stats-since' }, s.statsSince ? t('adm.stats.since', { date: fmtDate(s.statsSince) }) : t('adm.stats.sinceAll')), resetBtn),
+          M.resetArmed ? h('small', { id: 'stats-reset-hint' }, t('adm.stats.resetHint')) : null,
+          h('div', { class: 'stats' }, tile(t('adm.stats.users'), num(s.users)), tile(t('adm.stats.passes'), num((s.passesTotal != null ? s.passesTotal : s.activePasses.monthly + s.activePasses.yearly))),
+            tile(t('adm.stats.monthly'), num(s.activePasses.monthly)), tile(t('adm.stats.yearly'), num(s.activePasses.yearly)), tile(t('adm.stats.revenue'), money(s.revenueMonthEur)),
+            s.revenueTotalEur != null ? tile(t('adm.stats.revenueTotal'), money(s.revenueTotalEur)) : null,
+            s.gifts ? tile(t('adm.stats.granted'), num((s.gifts.games || 0) + (s.gifts.passes || 0))) : null),
           h('h2', {}, t('adm.stats.perGame')),
           h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, [t('adm.f.name'), t('adm.status'), t('adm.f.price'), t('adm.stats.sales'), t('adm.stats.granted')].map((c) => h('th', {}, c)))),
-            h('tbody', {}, (s.games || []).map((g) => h('tr', {}, h('td', {}, g.name), h('td', {}, chip(g.status)), h('td', {}, money(g.priceCents / 100)), h('td', {}, window.I18N.num(g.sales)), h('td', {}, window.I18N.num(g.granted || 0))))))]);
+            h('tbody', {}, (s.games || []).map((g) => h('tr', {}, h('td', {}, g.name), h('td', {}, chip(g.status)), h('td', {}, money(g.priceCents / 100)), h('td', {}, num(g.sales)), h('td', {}, num(g.granted || 0))))))]);
     }
 
     // ---------- paiements (Stripe / PayPal : état de la configuration automatique) ----------
