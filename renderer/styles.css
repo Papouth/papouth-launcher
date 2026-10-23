@@ -257,10 +257,31 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow-wrap:an
 .previewbar{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;background:var(--inv-bg);color:var(--inv-fg);border-radius:var(--r);padding:10px 16px;margin:0 auto 18px;max-width:1400px}
 .previewbar .sub{margin:0;color:inherit;opacity:.8;flex:1}
 .searchrow{margin:6px 0 18px}
-.ulist{display:flex;flex-direction:column;gap:12px}
-.urow{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,1.3fr) auto;gap:10px 18px;align-items:center;background:var(--surface);border:var(--bd);border-radius:var(--r);padding:12px 16px}
-.uinfo{display:flex;flex-direction:column;min-width:0}.uinfo b{overflow-wrap:anywhere}.uinfo small,.uown small{color:var(--text-muted)}
-.uown{display:flex;gap:6px;flex-wrap:wrap}
+.ulist{display:flex;flex-direction:column;gap:12px;container-type:inline-size;container-name:ulist}
+.urow{display:grid;grid-template-columns:minmax(180px,1fr) minmax(160px,1.2fr) auto;grid-template-areas:"id own act";gap:10px 18px;align-items:start;background:var(--surface);border:var(--bd);border-radius:var(--r);padding:12px 16px}
+.uinfo{grid-area:id;display:flex;flex-direction:column;min-width:0}.uinfo b{overflow-wrap:anywhere}.uinfo small,.uown small{color:var(--text-muted)}
+.uown{grid-area:own;display:flex;gap:6px;flex-wrap:wrap;align-content:flex-start;min-width:0}
+.uown .chip{min-width:max-content;max-width:100%;overflow-wrap:anywhere;font-size:12px;line-height:20px;padding:2px 10px}
+.uact{grid-area:act;display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:nowrap;min-width:0}
+.uact .btn{white-space:nowrap}
+.umorewrap{position:relative;flex:none}
+.umenu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:240px;max-width:min(320px,calc(100vw - 32px));display:flex;flex-direction:column;padding:6px;background:var(--surface);border:var(--bd);border-radius:var(--r);box-shadow:var(--sh)}
+.umenu[hidden]{display:none}
+.umenu.start{right:auto;left:0}
+.umenu.up{top:auto;bottom:calc(100% + 6px)}
+.umi{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 12px;font:inherit;font-weight:700;color:var(--text);cursor:pointer}
+.umi:hover,.umi:focus-visible{background:var(--inv-bg);color:var(--inv-fg);outline:none}
+.umi.danger{color:var(--err);border-top:1.5px solid var(--border);border-radius:0 0 8px 8px;margin-top:4px;padding-top:10px}
+.umi.danger:hover,.umi.danger:focus-visible{background:var(--err);color:var(--on-dark)}
+.umore[aria-expanded="true"]{background:var(--inv-bg);color:var(--inv-fg)}
+@container ulist (max-width:820px){
+  .urow{grid-template-columns:minmax(180px,1fr) minmax(160px,1.2fr);grid-template-areas:"id own" "act act"}
+  .uact{justify-content:flex-start;padding-top:10px;border-top:1.5px solid var(--border)}
+}
+@container ulist (max-width:520px){
+  .urow{grid-template-columns:minmax(0,1fr);grid-template-areas:"id" "own" "act"}
+  .uact{flex-wrap:wrap}
+}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
 .stat{display:flex;flex-direction:column;gap:2px;background:var(--surface);border:var(--bd);border-radius:var(--r);padding:14px 16px}
 .stat small{color:var(--text-muted);font-weight:700}.stat b{font-size:28px;font-weight:900;letter-spacing:-1px}
@@ -268,7 +289,6 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow-wrap:an
 .tbl th,.tbl td{text-align:left;padding:10px 14px;border-bottom:1.5px solid var(--border);vertical-align:top;overflow-wrap:anywhere}
 .tbl th{font-size:12px;color:var(--text-muted);font-weight:800}
 .tbl tr:last-child td{border-bottom:0}
-@media (max-width:1100px){.urow{grid-template-columns:1fr}}
 
 /* Firestore (anciens jeux) */
 .fsline{color:var(--text-muted);font-size:13px;margin:8px 0}

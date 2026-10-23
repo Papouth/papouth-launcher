@@ -233,6 +233,7 @@
   'adm.users.givePass': 'มอบ Game Pass',
   'adm.users.days': 'ระยะเวลา (วัน)',
   'adm.users.granted': 'มอบสิทธิ์แล้ว',
+  'adm.users.more': 'เพิ่มเติม', 'adm.users.moreLabel': 'การดำเนินการอื่น',
   'adm.users.revoke': 'เพิกถอน',
   'adm.users.revoked': 'เพิกถอนสิทธิ์แล้ว',
   'adm.users.confirmRevoke': 'เพิกถอนสิทธิ์นี้ของผู้เล่นหรือไม่?',

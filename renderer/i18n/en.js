@@ -233,6 +233,7 @@
   'adm.users.givePass': 'Gift the Game Pass',
   'adm.users.days': 'Duration (days)',
   'adm.users.granted': 'Access granted.',
+  'adm.users.more': 'More', 'adm.users.moreLabel': 'More actions',
   'adm.users.revoke': 'Revoke',
   'adm.users.revoked': 'Access revoked.',
   'adm.users.confirmRevoke': 'Revoke this access from the player?',

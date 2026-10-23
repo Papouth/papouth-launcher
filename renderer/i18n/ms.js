@@ -233,6 +233,7 @@
   'adm.users.givePass': 'Hadiahkan Game Pass',
   'adm.users.days': 'Tempoh (hari)',
   'adm.users.granted': 'Akses diberikan.',
+  'adm.users.more': 'Lagi', 'adm.users.moreLabel': 'Tindakan lain',
   'adm.users.revoke': 'Tarik balik',
   'adm.users.revoked': 'Akses ditarik balik.',
   'adm.users.confirmRevoke': 'Tarik balik akses ini daripada pemain?',

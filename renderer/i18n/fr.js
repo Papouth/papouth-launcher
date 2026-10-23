@@ -233,6 +233,7 @@
   'adm.users.givePass': 'Offrir le Game Pass',
   'adm.users.days': 'Durée (jours)',
   'adm.users.granted': 'Accès offert.',
+  'adm.users.more': 'Plus', 'adm.users.moreLabel': 'Autres actions',
   'adm.users.revoke': 'Retirer',
   'adm.users.revoked': 'Accès retiré.',
   'adm.users.confirmRevoke': 'Retirer cet accès au joueur ?',

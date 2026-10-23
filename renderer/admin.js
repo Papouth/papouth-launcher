@@ -485,6 +485,57 @@
     });
 
     // ---------- joueurs ----------
+    // Menu « Plus ⋯ » : actions secondaires d'un joueur (clavier : flèches, Début/Fin, Échap ; fermeture au clic extérieur).
+    let closeMenu = null;
+    const hasSync = (u) => (u.firestore || []).length || (u.legacy || []).length || (u.gamehub || []).length;
+    function moreMenu(u) {
+      const items = [];
+      if (hasSync(u)) items.push({ label: t('fs.sync.resync'), run: () => resyncUser(u) });
+      if ((u.legacy || []).some((l) => !l.claimed)) items.push({ label: t('fs.users.claim'), run: () => claimModal(u) });
+      items.push({ label: t('adm.users.resetDevice'), run: () => resetDeviceModal(u) });
+      items.push({ label: t('adm.users.resetLink'), run: () => resetLinkModal(u), id: 'reset-link-' + u.id });
+      items.push({ label: t('adm.users.revoke'), run: () => revokeModal(u), danger: true });
+      const menuId = 'umenu-' + u.id;
+      const btns = items.map((it) => h('button', { class: 'umi' + (it.danger ? ' danger' : ''), type: 'button', role: 'menuitem', tabindex: '-1', id: it.id, onclick: () => { close(true); it.run(); } }, it.label));
+      const menu = h('div', { class: 'umenu', role: 'menu', id: menuId, hidden: true, 'aria-label': t('adm.users.moreLabel') }, btns);
+      const trigger = h('button', { class: 'btn sm ghost umore', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': menuId, 'aria-label': t('adm.users.moreLabel') }, t('adm.users.more') + ' \u22EF');
+      const wrap = h('div', { class: 'umorewrap' }, trigger, menu);
+      function close(focus) {
+        if (menu.hidden) return;
+        menu.hidden = true; trigger.setAttribute('aria-expanded', 'false'); wrap.classList.remove('on');
+        menu.classList.remove('up', 'start');
+        document.removeEventListener('pointerdown', outside, true);
+        if (closeMenu === close) closeMenu = null;
+        if (focus) trigger.focus();
+      }
+      const outside = (ev) => { if (!wrap.contains(ev.target)) close(false); };
+      function open(focusIdx) {
+        if (closeMenu) closeMenu(false);
+        menu.hidden = false; trigger.setAttribute('aria-expanded', 'true'); wrap.classList.add('on');
+        const r = menu.getBoundingClientRect(), tr = trigger.getBoundingClientRect();
+        if (tr.right - r.width < 8) menu.classList.add('start'); // pas assez de place à gauche : alignement sur le bord gauche
+        if (tr.bottom + r.height > window.innerHeight - 8 && tr.top > r.height + 8) menu.classList.add('up');
+        document.addEventListener('pointerdown', outside, true);
+        closeMenu = close;
+        if (focusIdx != null) btns[focusIdx < 0 ? btns.length - 1 : focusIdx].focus();
+      }
+      trigger.addEventListener('click', () => (menu.hidden ? open(null) : close(false)));
+      trigger.addEventListener('keydown', (ev) => {
+        if (ev.key === 'ArrowDown') { ev.preventDefault(); if (menu.hidden) open(0); else btns[0].focus(); }
+        else if (ev.key === 'ArrowUp') { ev.preventDefault(); if (menu.hidden) open(-1); else btns[btns.length - 1].focus(); }
+        else if (ev.key === 'Escape' && !menu.hidden) { ev.preventDefault(); close(true); }
+      });
+      menu.addEventListener('keydown', (ev) => {
+        const i = btns.indexOf(document.activeElement);
+        if (ev.key === 'Escape') { ev.preventDefault(); close(true); }
+        else if (ev.key === 'Tab') close(false);
+        else if (ev.key === 'ArrowDown') { ev.preventDefault(); btns[(i + 1) % btns.length].focus(); }
+        else if (ev.key === 'ArrowUp') { ev.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
+        else if (ev.key === 'Home') { ev.preventDefault(); btns[0].focus(); }
+        else if (ev.key === 'End') { ev.preventDefault(); btns[btns.length - 1].focus(); }
+      });
+      return wrap;
+    }
     function usersView() {
       const q = h('input', { type: 'search', id: 'user-q', placeholder: t('adm.users.search'), value: M.q, 'aria-label': t('adm.users.search'), onkeydown: (ev) => { if (ev.key === 'Enter') go(); } });
       const go = () => { M.q = q.value.trim(); load('users'); };
@@ -494,14 +545,10 @@
           (u.owned || []).map((s) => h('span', { class: 'chip alt' }, gameName(s))), !(u.pass && u.pass.active) && !(u.owned || []).length ? h('small', {}, t('adm.users.nothing')) : null,
           legacyBadge(u), (u.firestore || []).map((r) => h('span', { class: 'chip st fs-' + r.state, title: r.lastError || '', 'data-fs': r.slug }, 'Firestore · ' + gameName(r.slug) + ' · ' + t('fs.sync.state.' + r.state))),
           (u.gamehub || []).map((r) => h('span', { class: 'chip st fs-' + r.state, title: r.lastError || '', 'data-gh': r.slug }, 'GameHub · ' + gameName(r.slug) + ' · ' + t('gh.state.' + r.state)))),
-        h('div', { class: 'row' },
-          (u.firestore || []).length || (u.legacy || []).length || (u.gamehub || []).length ? h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resyncUser(u) }, t('fs.sync.resync')) : null,
-          (u.legacy || []).some((l) => !l.claimed) ? h('button', { class: 'btn sm', type: 'button', onclick: () => claimModal(u) }, t('fs.users.claim')) : null,
+        h('div', { class: 'uact' },
           h('button', { class: 'btn sm', type: 'button', onclick: () => grantGameModal(u) }, t('adm.users.giveGame')),
           h('button', { class: 'btn sm', type: 'button', onclick: () => grantPassModal(u) }, t('adm.users.givePass')),
-          h('button', { class: 'btn sm outline-danger', type: 'button', onclick: () => revokeModal(u) }, t('adm.users.revoke')),
-          h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resetDeviceModal(u) }, t('adm.users.resetDevice')),
-          h('button', { class: 'btn sm ghost', type: 'button', id: 'reset-link-' + u.id, onclick: () => resetLinkModal(u) }, t('adm.users.resetLink')))));
+          moreMenu(u))));
       return h('div', { class: 'adm' }, head(t('adm.users.title'), t('adm.users.sub')),
         h('div', { class: 'row searchrow' }, q, h('button', { class: 'btn', type: 'button', onclick: go }, t('adm.search')),
           h('button', { class: 'btn ghost', type: 'button', id: 'gh-resync-all', onclick: resyncAllGamehub }, t('gh.resyncAll'))),
