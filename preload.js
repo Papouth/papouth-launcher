@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('alien', {
   getState: () => call('state:get'),
   login: (email, password) => call('auth:login', { email, password }),
   register: (email, password, tiktok) => call('auth:register', { email, password, tiktok }),
+  forgotPassword: () => call('auth:forgot'),
+  changePassword: (current, newPassword, lang) => call('auth:changePassword', { current, newPassword, lang }),
   logout: () => call('auth:logout'),
   startDemo: () => call('demo:start'),
   catalog: (lang) => call('store:catalog', lang),

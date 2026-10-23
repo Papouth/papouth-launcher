@@ -281,3 +281,6 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow-wrap:an
 .chip.st.fs-external{background:var(--surface-2);color:var(--text)}
 #fs-panel .kv code{overflow-wrap:anywhere}
 #fs-panel .kv .row{gap:8px;flex-wrap:wrap}
+
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--muted,inherit);opacity:.8;text-decoration:underline;cursor:pointer;align-self:flex-start}
+.linkbtn:hover,.linkbtn:focus-visible{opacity:1}

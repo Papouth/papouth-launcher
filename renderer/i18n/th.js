@@ -19,6 +19,7 @@
   'auth.password': 'รหัสผ่าน', 'auth.passwordPh': 'อย่างน้อย 8 ตัวอักษร',
   'auth.tiktok': '@TikTok', 'auth.tiktokPh': '@บัญชีของคุณ',
   'auth.submitLogin': 'เข้าสู่ระบบ', 'auth.submitRegister': 'สร้างบัญชีของฉัน',
+  'auth.forgot': 'ลืมรหัสผ่าน?', 'acc.chpwTitle': 'เปลี่ยนรหัสผ่าน', 'acc.chpwCurrent': 'รหัสผ่านปัจจุบัน', 'acc.chpwNew': 'รหัสผ่านใหม่', 'acc.chpwConfirm': 'ยืนยันรหัสผ่านใหม่', 'acc.chpwBtn': 'เปลี่ยนรหัสผ่าน', 'acc.chpwOk': 'เปลี่ยนรหัสผ่านแล้ว ส่งอีเมลยืนยันแล้ว และอุปกรณ์อื่นของคุณถูกออกจากระบบ', 'acc.chpwMismatch': 'รหัสผ่านทั้งสองช่องไม่ตรงกัน', 'adm.users.resetLink': 'สร้างลิงก์รีเซ็ตรหัสผ่าน', 'adm.rl.title': 'ลิงก์รีเซ็ตรหัสผ่าน', 'adm.rl.check': 'ก่อนสร้าง ให้ตรวจสอบตัวตนของบุคคลนั้น โดยขอ:', 'adm.rl.c1': 'อีเมลของบัญชี', 'adm.rl.c2': '@TikTok ของเขา', 'adm.rl.c3': 'ควรมีใบเสร็จ Stripe/PayPal หรือวันที่ซื้อโดยประมาณ', 'adm.rl.compare': 'เทียบกับข้อมูลที่แผงแสดงสำหรับผู้เล่นคนนี้', 'adm.rl.duration': 'อายุของลิงก์', 'adm.rl.h1': '1 ชั่วโมง', 'adm.rl.h24': '24 ชั่วโมง', 'adm.rl.generate': 'สร้างลิงก์', 'adm.rl.warn': 'ส่งลิงก์นี้ให้เฉพาะบุคคลที่ยืนยันตัวตนแล้ว (ข้อความส่วนตัวใน Discord หรืออีเมล) จะแสดงอีกไม่ได้หลังปิดหน้าต่างนี้', 'adm.rl.copy': 'คัดลอก', 'adm.rl.copied': 'คัดลอกลิงก์แล้ว', 'adm.rl.expires': 'หมดอายุ {date}',
   'auth.demo': 'ดูในโหมดเดโม', 'auth.unreachable': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้',
   'tag.notOwned': 'ยังไม่เป็นเจ้าของ', 'tag.lifetime': 'ตลอดชีพ', 'tag.pass': 'Game Pass',
   'card.view': 'ดูหน้าเกม {name}',

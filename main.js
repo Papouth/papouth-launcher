@@ -147,6 +147,18 @@ async function authDone(r) {
 }
 handle('auth:login', async ({ email, password }) => authDone(await api.login(email, password)));
 handle('auth:register', async ({ email, password, tiktok }) => authDone(await api.register(email, password, tiktok)));
+// « Mot de passe oublié ? » : la page du site gère le cas (formulaire e-mail ou contact support)
+handle('auth:forgot', async () => {
+  let origin; try { origin = new URL(apiUrl()).origin; } catch (_) { throw new ApiError('bad_api_url', 'URL du serveur invalide.'); }
+  await shell.openExternal(origin + '/compte.html#oubli');
+  return true;
+});
+handle('auth:changePassword', async ({ current, newPassword, lang }) => {
+  if (demoMode) return { ok: true };
+  const r = await api.changePassword(String(current || ''), String(newPassword || ''), lang);
+  if (r && r.token) { api.setToken(r.token); saveToken(r.token); } // la session courante reste ouverte (les autres appareils sont déconnectés)
+  return { ok: true };
+});
 handle('auth:logout', async () => {
   realtime.stop(); clearToken(); api.setToken(null); session.user = null; demoMode = false;
   return true;

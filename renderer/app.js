@@ -174,6 +174,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
           mode === 'register' ? field('tiktok', t('auth.tiktok'), 'text', t('auth.tiktokPh')) : null,
           h('div', { class: 'err' }, err ? errText(err) : ''),
           h('button', { class: 'btn primary', type: 'submit' }, mode === 'login' ? t('auth.submitLogin') : t('auth.submitRegister')),
+          mode === 'login' ? h('button', { class: 'linkbtn', type: 'button', id: 'forgot-pw', onclick: () => { call(A.forgotPassword()).catch((e) => toast(errText(e), 'error')); } }, t('auth.forgot')) : null,
           S.demoAvailable ? h('button', { class: 'btn ghost', type: 'button', onclick: startDemo }, t('auth.demo')) : null,
           !S.reachable ? h('div', { class: 'err' }, t('auth.unreachable')) : null));
     };
@@ -353,6 +354,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
           h('button', { type: 'button', class: curTheme() === 'night' ? 'on' : '', 'aria-pressed': String(curTheme() === 'night'), onclick: () => setTheme('night') }, themeIcon('night'), t('theme.night')),
           h('button', { type: 'button', class: curTheme() === 'day' ? 'on' : '', 'aria-pressed': String(curTheme() === 'day'), onclick: () => setTheme('day') }, themeIcon('day'), t('theme.day')))),
         h('dt', {}, t('acc.lifetime')), h('dd', {}, owned.length ? h('div', { class: 'chips' }, owned.map((g) => h('span', { class: 'chip' }, g.name))) : t('acc.nolife')))),
+      changePasswordPanel(),
       h('div', { class: 'row', style: 'margin-top:18px' },
         passActive() && !cancelling ? h('button', { class: 'btn outline-danger', id: 'cancel-sub', onclick: cancelModal }, t('acc.cancelBtn')) : null,
         cancelling ? h('button', { class: 'btn primary', id: 'resume-sub', onclick: resumeOrResub }, p.provider === 'paypal' ? t('acc.resubscribe') : t('acc.reactivate')) : null,
@@ -362,6 +364,23 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         h('div', {}, t('acc.apiUrl')), advInput,
         h('div', { class: 'row', style: 'margin-top:10px' }, h('button', { class: 'btn sm', onclick: async () => {
           try { const r = await call(A.setApiUrl(advInput.value)); S.apiUrl = r.apiUrl; toast(t('acc.saved')); } catch (e) { toast(errText(e), 'error'); } } }, t('acc.save')))) : null);
+  }
+  function changePasswordPanel() {
+    const f = {};
+    const fld = (key, label, ac) => h('label', {}, label, f[key] = h('input', { type: 'password', required: true, minlength: key === 'cur' ? 1 : 8, maxlength: 128, autocomplete: ac }));
+    const err = h('div', { class: 'err' });
+    const submit = async (ev) => {
+      ev.preventDefault(); err.textContent = '';
+      if (f.nw.value !== f.cf.value) { err.textContent = t('acc.chpwMismatch'); return; }
+      const btn = ev.target.querySelector('button[type=submit]'); btn.disabled = true;
+      try { await call(A.changePassword(f.cur.value, f.nw.value, window.I18N.lang())); ev.target.reset(); toast(t('acc.chpwOk')); }
+      catch (e) { err.textContent = errText(e); }
+      btn.disabled = false;
+    };
+    return h('div', { class: 'panel', style: 'margin-top:18px' }, h('h3', { style: 'margin:0 0 10px' }, t('acc.chpwTitle')),
+      h('form', { id: 'chpw-form', class: 'stack', onsubmit: submit },
+        fld('cur', t('acc.chpwCurrent'), 'current-password'), fld('nw', t('acc.chpwNew'), 'new-password'), fld('cf', t('acc.chpwConfirm'), 'new-password'),
+        err, h('div', { class: 'row' }, h('button', { class: 'btn', type: 'submit' }, t('acc.chpwBtn')))));
   }
   function cancelModal() {
     closeModal();

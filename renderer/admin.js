@@ -461,7 +461,8 @@
           h('button', { class: 'btn sm', type: 'button', onclick: () => grantGameModal(u) }, t('adm.users.giveGame')),
           h('button', { class: 'btn sm', type: 'button', onclick: () => grantPassModal(u) }, t('adm.users.givePass')),
           h('button', { class: 'btn sm outline-danger', type: 'button', onclick: () => revokeModal(u) }, t('adm.users.revoke')),
-          h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resetDeviceModal(u) }, t('adm.users.resetDevice')))));
+          h('button', { class: 'btn sm ghost', type: 'button', onclick: () => resetDeviceModal(u) }, t('adm.users.resetDevice')),
+          h('button', { class: 'btn sm ghost', type: 'button', id: 'reset-link-' + u.id, onclick: () => resetLinkModal(u) }, t('adm.users.resetLink')))));
       return h('div', { class: 'adm' }, head(t('adm.users.title'), t('adm.users.sub')),
         h('div', { class: 'row searchrow' }, q, h('button', { class: 'btn', type: 'button', onclick: go }, t('adm.search'))),
         M.users == null ? h('div', { class: 'empty' }, t('adm.loading')) : rows.length ? h('div', { class: 'ulist' }, rows) : h('div', { class: 'empty' }, t('adm.users.none')));
@@ -483,6 +484,29 @@
     async function ensureGames() { if (!M.games) { try { M.games = (await adm('GET', '/admin/games')).games; } catch (_) { M.games = []; } } }
     async function act(fn, okMsg) {
       try { const r = await fn(); closeModal(); toast(okMsg); await load('users'); return r; } catch (e) { const el = document.querySelector('#modal .err'); if (el) el.textContent = errText(e); else toast(errText(e), 'error'); }
+    }
+    function resetLinkModal(u) {
+      const hours = h('select', {}, h('option', { value: '24' }, t('adm.rl.h24')), h('option', { value: '1' }, t('adm.rl.h1')));
+      const err = h('div', { class: 'err' });
+      const body = h('div', { class: 'stack' }, h('small', {}, '@' + u.tiktok),
+        h('div', {}, t('adm.rl.check')), h('ul', {}, [t('adm.rl.c1'), t('adm.rl.c2'), t('adm.rl.c3')].map((x) => h('li', {}, x))),
+        h('div', {}, t('adm.rl.compare')), fld(t('adm.rl.duration'), hours), err);
+      const gen = h('button', { class: 'btn primary', type: 'button', id: 'reset-link-gen', onclick: async () => {
+        gen.disabled = true; err.textContent = '';
+        try {
+          const r = await adm('POST', '/admin/users/' + encodeURIComponent(u.id) + '/reset-link', { hours: Number(hours.value) });
+          const out = h('input', { type: 'text', readonly: true, id: 'reset-link-out', value: r.link, onfocus: (e) => e.target.select() });
+          const copy = h('button', { class: 'btn primary', type: 'button', id: 'reset-link-copy', onclick: async () => {
+            out.select();
+            try { await navigator.clipboard.writeText(r.link); } catch (_) { try { document.execCommand('copy'); } catch (__) { /* sélection manuelle possible */ } }
+            toast(t('adm.rl.copied'));
+          } }, t('adm.rl.copy'));
+          body.replaceChildren(h('small', {}, '@' + u.tiktok), out, h('small', {}, t('adm.rl.expires', { date: new Date(r.expiresAt).toLocaleString(window.I18N.lang()) })), h('div', { class: 'warn' }, t('adm.rl.warn')));
+          gen.replaceWith(copy);
+          out.select();
+        } catch (e) { err.textContent = errText(e); gen.disabled = false; }
+      } }, t('adm.rl.generate'));
+      modal(t('adm.rl.title'), body, [gen, h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, t('adm.cancel'))]);
     }
     function resetDeviceModal(u) {
       modal(t('adm.users.resetDevice'), h('div', { class: 'stack' }, h('small', {}, '@' + u.tiktok), h('div', {}, t('adm.users.resetDeviceHint')), h('div', { class: 'err' })),

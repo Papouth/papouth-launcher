@@ -88,6 +88,7 @@ class StoreApi {
     if (lang) body.lang = lang;
     return this.request('POST', '/checkout', body);
   }
+  changePassword(current, newPassword, lang) { return this.request('POST', '/auth/change-password', { current, new: newPassword, lang }); }
   billingPortal(lang) { return this.request('POST', '/billing/portal', lang ? { lang } : {}); }
   cancelSubscription() { return this.request('POST', '/billing/cancel', {}); }
   resumeSubscription() { return this.request('POST', '/billing/resume', {}); }
