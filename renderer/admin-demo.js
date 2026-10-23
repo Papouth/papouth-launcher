@@ -38,7 +38,8 @@
       { id: 'u3', email: 'ma***@outlook.fr', tiktok: 'max_gaming', role: 'player', createdAt: now(), pass: { active: false, plan: null, provider: null, renewsAt: null, cancelAtPeriodEnd: false }, owned: ['pop-riot'], devices: 1 },
       { id: 'u4', email: 'th***@hotmail.com', tiktok: 'thai_streamer', role: 'player', createdAt: now(), pass: { active: true, plan: 'yearly', provider: 'paypal', renewsAt: new Date(Date.now() + 200 * 864e5).toISOString(), cancelAtPeriodEnd: false }, owned: ['paintball-master'], devices: 1 }
     ];
-    users.forEach((u) => { u.legacy = []; u.firestore = []; u.gamehub = []; });
+    users.forEach((u) => { u.legacy = []; u.firestore = []; u.gamehub = []; u.origins = {}; });
+    users[2].origins = { 'pop-riot': 'purchase' }; users[3].origins = { 'paintball-master': 'admin' }; // origine de chaque accès à vie
     users[2].legacy = [{ slug: games[0].slug, claimed: false }];
     users[1].firestore = [{ slug: games[1].slug, docId: users[1].tiktok, state: 'synced', lastError: null, syncedAt: now() }, { slug: games[0].slug, docId: users[1].tiktok, state: 'external', lastError: null, syncedAt: now() }];
     users[1].gamehub = [{ slug: games[1].slug, gamehubId: games[1].slug, handle: users[1].tiktok, state: 'synced', retries: 0, lastError: null, syncedAt: now() }, { slug: games[0].slug, gamehubId: games[0].slug, handle: users[1].tiktok, state: 'external', retries: 0, lastError: null, syncedAt: now() }];
@@ -170,7 +171,11 @@
         }
         case 'GET users': {
           const q = (u.searchParams.get('q') || '').toLowerCase();
-          return { users: users.filter((x) => !q || x.tiktok.includes(q) || x.email === q).map((x) => JSON.parse(JSON.stringify(x))) };
+          return { users: users.filter((x) => !q || x.tiktok.includes(q) || x.email === q).map((x) => {
+            const c = JSON.parse(JSON.stringify(x));
+            c.accesses = x.owned.map((slug) => ({ slug, origin: (x.origins || {})[slug] || 'purchase', since: now() }));
+            delete c.origins; return c;
+          }) };
         }
         case 'POST grant': {
           const x = users.find((y) => y.id === b.userId);
@@ -181,6 +186,7 @@
           } else {
             find(b.slug);
             if (!x.owned.includes(b.slug)) x.owned.push(b.slug);
+            x.origins[b.slug] = 'admin';
             audit('grant.game', x.email, b.slug);
           }
           return { ok: true, pass: x.pass, owned: x.owned };
@@ -193,8 +199,12 @@
             x.pass = { active: false, plan: null, provider: null, renewsAt: null, cancelAtPeriodEnd: false };
             audit('revoke.pass', x.email);
           } else {
-            if (!x.owned.includes(b.slug)) throw err('not_owned', 'Ce joueur ne possède pas ce jeu.');
-            x.owned = x.owned.filter((s) => s !== b.slug); audit('revoke.game', x.email, b.slug);
+            if (!x.owned.includes(b.slug)) {
+              if (x.pass.active) throw err('access_from_pass', 'Ce joueur accède à ce jeu via son Game Pass, pas via un achat : retirez ou résiliez son Game Pass (Stripe / PayPal s\'il est payant) pour couper l\'accès.');
+              throw err('not_owned', 'Ce joueur ne possède pas ce jeu.');
+            }
+            x.owned = x.owned.filter((s) => s !== b.slug); delete x.origins[b.slug]; audit('revoke.game', x.email, b.slug);
+            if (x.pass.active) return { ok: true, pass: x.pass, owned: x.owned, stillViaPass: true };
           }
           return { ok: true, pass: x.pass, owned: x.owned };
         }
@@ -254,7 +264,7 @@
           const l = x.legacy.find((r) => r.slug === b.slug);
           if (!l) throw err('unknown_legacy', 'Cet accès n\'a pas été importé : lancez d\'abord « Importer les accès existants ».');
           l.claimed = true;
-          if (b.grant === 'lifetime' && !x.owned.includes(b.slug)) x.owned.push(b.slug);
+          if (b.grant === 'lifetime' && !x.owned.includes(b.slug)) { x.owned.push(b.slug); x.origins[b.slug] = 'legacy'; }
           audit('legacy.claim', x.email, b.slug + ' @' + x.tiktok);
           return { ok: true, pass: x.pass, owned: x.owned };
         }

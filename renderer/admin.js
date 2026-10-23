@@ -536,7 +536,7 @@
       if ((u.legacy || []).some((l) => !l.claimed)) items.push({ label: t('fs.users.claim'), run: () => claimModal(u) });
       items.push({ label: t('adm.users.resetDevice'), run: () => resetDeviceModal(u) });
       items.push({ label: t('adm.users.resetLink'), run: () => resetLinkModal(u), id: 'reset-link-' + u.id });
-      items.push({ label: t('adm.users.revoke'), run: () => revokeModal(u), danger: true });
+      items.push({ label: t('adm.rv.menu'), run: () => revokeModal(u), danger: true, id: 'revoke-menu-' + u.id });
       const menuId = 'umenu-' + u.id;
       const btns = items.map((it) => h('button', { class: 'umi' + (it.danger ? ' danger' : ''), type: 'button', role: 'menuitem', tabindex: '-1', id: it.id, onclick: () => { close(true); it.run(); } }, it.label));
       const menu = h('div', { class: 'umenu', role: 'menu', id: menuId, hidden: true, 'aria-label': t('adm.users.moreLabel') }, btns);
@@ -659,13 +659,50 @@
       modal(t('adm.users.givePass'), h('div', { class: 'stack' }, h('small', {}, '@' + u.tiktok), fld(t('adm.users.days'), days), h('div', { class: 'err' })),
         [h('button', { class: 'btn primary', type: 'button', onclick: () => act(() => adm('POST', '/admin/grant', { userId: u.id, slug: 'pass', days: Number(days.value) || 30 }), t('adm.users.granted')) }, t('adm.users.givePass')), h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, t('adm.cancel'))]);
     }
+    // « Retirer un accès… » : liste les accès ACTUELS du joueur avec leur origine, un bouton « Retirer » par ligne (confirmation en deux clics, sans boîte de dialogue système).
+    // Le Game Pass payant n'est pas retirable ici (résiliation via Stripe / PayPal). Après chaque retrait la liste est rechargée depuis le serveur.
     async function revokeModal(u) {
       await ensureGames();
-      const opts = [...(u.owned || []).map((s) => ({ v: s, l: gameName(s) })), ...(u.pass && u.pass.active ? [{ v: 'pass', l: t('adm.users.pass') }] : [])];
-      if (!opts.length) { toast(t('adm.users.nothing'), 'error'); return; }
-      const sel = h('select', {}, opts.map((o) => h('option', { value: o.v }, o.l)));
-      modal(t('adm.users.revoke'), h('div', { class: 'stack' }, h('small', {}, '@' + u.tiktok), sel, h('div', { class: 'err' })),
-        [h('button', { class: 'btn outline-danger', type: 'button', onclick: () => { if (confirm(t('adm.users.confirmRevoke'))) act(() => adm('POST', '/admin/revoke', { userId: u.id, slug: sel.value }), t('adm.users.revoked')); } }, t('adm.users.revoke')), h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, t('adm.cancel'))]);
+      let cur = u, armed = null; // armed : ligne en attente de confirmation
+      const lines = (x) => {
+        const out = [];
+        const acc = Array.isArray(x.accesses) ? x.accesses : (x.owned || []).map((s) => ({ slug: s, origin: 'purchase' }));
+        for (const a of acc) out.push({ key: 'g:' + a.slug, slug: a.slug, name: gameName(a.slug), origin: t('adm.rv.origin.' + a.origin), can: true });
+        if (x.pass && x.pass.active) {
+          const gift = x.pass.provider === 'admin';
+          out.push({ key: 'pass', slug: 'pass', name: t('adm.users.pass'), origin: gift ? t('adm.rv.pass.gift') : t('adm.rv.pass.paid') + (x.pass.provider ? ' · ' + (x.pass.provider === 'paypal' ? 'PayPal' : 'Stripe') : ''),
+            note: gift ? t('adm.rv.pass.all') : t('adm.rv.pass.hint'), can: gift });
+        }
+        return out;
+      };
+      const body = h('div', { class: 'stack', id: 'revoke-list' });
+      const err = h('div', { class: 'err', role: 'alert' });
+      async function reload() {
+        await load('users');
+        const f = (M.users || []).find((y) => y.id === u.id);
+        if (f) cur = f; // le joueur reste affiché même si la recherche ne le renvoie plus
+      }
+      async function remove(l) {
+        err.textContent = '';
+        try {
+          const r = await adm('POST', '/admin/revoke', { userId: u.id, slug: l.slug });
+          toast(r && r.stillViaPass ? t('adm.rv.stillPass') : t('adm.users.revoked'), r && r.stillViaPass ? 'error' : undefined);
+          armed = null; await reload(); draw();
+        } catch (e) { armed = null; err.textContent = errText(e); toast(errText(e), 'error'); draw(); }
+      }
+      function draw() {
+        const ls = lines(cur);
+        body.replaceChildren(h('small', {}, '@' + cur.tiktok), h('div', { class: 'sub' }, t('adm.rv.hint')),
+          ls.length ? h('div', { class: 'accs' }, ls.map((l) => h('div', { class: 'accrow', 'data-acc': l.slug },
+            h('div', { class: 'accinfo' }, h('b', {}, l.name), h('small', {}, l.origin), l.note ? h('small', { class: 'accnote' }, l.note) : null),
+            l.can ? (armed === l.key
+              ? h('div', { class: 'row' }, h('button', { class: 'btn sm danger', type: 'button', 'data-confirm': l.slug, onclick: () => remove(l) }, t('adm.rv.confirm')), h('button', { class: 'btn sm ghost', type: 'button', onclick: () => { armed = null; draw(); } }, t('adm.cancel')))
+              : h('button', { class: 'btn sm outline-danger', type: 'button', 'data-revoke': l.slug, onclick: () => { armed = l.key; err.textContent = ''; draw(); } }, t('adm.users.revoke'))) : null)))
+            : h('div', { class: 'empty' }, t('adm.users.nothing')), err);
+      }
+      draw();
+      modal(t('adm.rv.title'), body, [h('button', { class: 'btn ghost', type: 'button', id: 'revoke-close', onclick: closeModal }, t('adm.rv.close'))]);
+      reload().then(draw).catch(() => {}); // données fraîches du serveur (accès + origines)
     }
     // ---------- statistiques ----------
     function statsView() {
