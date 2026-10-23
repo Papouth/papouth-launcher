@@ -93,7 +93,7 @@
       h('span', { class: 'grip', 'aria-hidden': 'true' }, '⋮⋮'),
       h('div', { class: 'gthumb', style: g.coverUrl ? 'background-image:url("' + g.coverUrl.replace(/["\\()]/g, '') + '")' : 'background-color:' + g.accent }),
       h('div', { class: 'ginfo' }, h('b', {}, g.name), h('small', {}, g.slug + ' · v' + g.version + ' · ' + money(g.priceCents / 100))),
-      chip(g.status),
+      chip(g.status), g.hasBuild === false && !(g.download && (g.download.mode === 'url' ? g.download.url : g.download.mode === 'github' ? g.download.github : false)) ? h('span', { class: 'chip st draft' }, t('adm.badge.nobuild')) : null,
       h('div', { class: 'row' },
         h('button', { class: 'btn sm ghost', type: 'button', 'aria-label': t('adm.moveUp'), title: t('adm.moveUp'), disabled: i === 0, onclick: () => move(i, -1) }, '↑'),
         h('button', { class: 'btn sm ghost', type: 'button', 'aria-label': t('adm.moveDown'), title: t('adm.moveDown'), disabled: i === list.length - 1, onclick: () => move(i, 1) }, '↓'),
@@ -411,12 +411,13 @@
     function buildPanel(E, bind) {
       const g = E.game, d = g.download || {};
       const row = (k, v) => v ? [h('dt', {}, k), h('dd', {}, v)] : null;
+      const sent = d.hasBuild ? h('p', { class: 'sub' }, t('adm.build.sent', { version: g.version, date: d.uploadedAt ? fmtDate(d.uploadedAt) : '—', size: d.size ? t('card.size', { size: window.I18N.num(Math.round(d.size / 1048576)) }) : '—' })) : null;
       const info = d.hasBuild
         ? h('dl', { class: 'kv sm' }, row(t('adm.build.version'), 'v' + g.version), row(t('adm.build.sha'), h('code', { title: d.sha256 }, (d.sha256 || '').slice(0, 24) + '…')),
           row(t('adm.build.date'), d.uploadedAt ? fmtDate(d.uploadedAt) : null), row(t('adm.build.size'), d.size ? t('card.size', { size: window.I18N.num(Math.round(d.size / 1048576)) }) : null), row(t('adm.build.file'), d.originalName))
-        : h('div', { class: 'warn' }, d.mode === 'github' ? t('adm.build.github', { repo: d.github || '—' }) : d.mode === 'url' ? t('adm.build.url') : t('adm.build.none'));
+        : h('div', { class: 'warn' }, d.mode === 'github' ? t('adm.build.github', { repo: d.github || '—' }) : d.mode === 'url' ? t('adm.build.url') : t('adm.build.nobuild'));
       const bu = E.buildUp;
-      return h('section', { class: 'panel wide' }, h('h2', { class: 'ptitle' }, t('adm.sec.build')), h('p', { class: 'sub' }, t('adm.build.hint')), info,
+      return h('section', { class: 'panel wide' }, h('h2', { class: 'ptitle' }, t('adm.sec.build')), h('p', { class: 'sub' }, t('adm.build.hint')), sent, info,
         h('div', { class: 'fgrid' }, fld(t('adm.f.exe'), h('input', { type: 'text', maxlength: 80, ...bind('exe') }), t('adm.f.exeHint'))),
         bu ? h('div', { class: 'upl', 'data-up': bu.id }, h('span', { class: 'un' }, bu.name), bu.error ? h('span', { class: 'err' }, bu.error) : h('span', { class: 'pct' }, Math.round(bu.pct * 100) + '%'),
           bu.error ? h('button', { class: 'btn sm ghost', type: 'button', onclick: () => { E.buildUp = null; keepScroll(render); } }, '×') : h('div', { class: 'progress' }, h('i', { style: 'width:' + Math.round(bu.pct * 100) + '%' }))) : null,

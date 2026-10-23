@@ -215,7 +215,8 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       actions.append(
         h('button', { class: 'btn primary', onclick: () => payModal({ product: 'game', slug: g.slug, title: t('card.buyTitle', { name: g.name }), price: money(g.price || 40) }) }, t('card.buy', { price: money(g.price || 40) })),
         h('button', { class: 'link', onclick: () => { toPass(); } }, t('card.inPass')));
-    } else if (state === 'install') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.download')));
+    } else if (state === 'install' && g.available === false) actions.append(h('button', { class: 'btn', disabled: true }, t('act.soon')));
+    else if (state === 'install') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.download')));
     else if (state === 'update') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.update')), h('button', { class: 'btn ghost sm', onclick: () => play(g) }, t('act.playAnyway')));
     else if (state === 'running') actions.append(h('button', { class: 'btn', disabled: true }, t('act.playing')));
     else actions.append(h('button', { class: 'btn play', onclick: () => play(g) }, t('act.play')));
