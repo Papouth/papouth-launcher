@@ -271,7 +271,8 @@
       const g = find(slug);
       if (version) g.version = version;
       g.sizeMb = Math.max(1, Math.ceil(size / 1048576));
-      g.download = { ...g.download, mode: 'upload', hasBuild: true, size, uploadedAt: Date.now(), originalName: name, sha256: Array.from({ length: 8 }, rid).join('').slice(0, 64), ...(exe ? { exe } : {}) };
+      const isExe = /\.exe$/i.test(name);
+      g.download = { ...g.download, kind: isExe ? 'installer' : 'portable', exeCandidates: isExe ? [name] : [g.download.exe || 'Jeu.exe', 'Launcher.exe'], mode: 'upload', hasBuild: true, size, uploadedAt: Date.now(), originalName: name, sha256: Array.from({ length: 8 }, rid).join('').slice(0, 64), ...(exe ? { exe } : {}) };
       audit('game.build', slug, g.version);
       return { game: out(touch(g)) };
     }

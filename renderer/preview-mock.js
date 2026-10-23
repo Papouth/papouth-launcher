@@ -55,7 +55,8 @@
     access: hasPass ? games.map((g) => g.slug) : ['pop-riot']
   };
   let installed = hasPass ? { 'paintball-master': { version: '1.0.0', exe: 'a.exe', path: 'C:\\Papouth\\Games\\paintball-master' }, 'pop-riot': { version: '1.0.3', exe: 'a.exe', path: 'C:\\x' } } : { 'pop-riot': { version: '1.0.3', exe: 'a.exe', path: 'C:\\x' } };
-  const listeners = { p: [], g: [], u: [], a: [] };
+  const listeners = { p: [], g: [], u: [], a: [], d: [] };
+  const jobsMock = {}; let jobN = 0;
   const R = (d) => Promise.resolve({ ok: true, data: d });
   const user = { id: '1', email: 'demo@papouth.com', tiktok: 'papouth_demo', role: q.get('admin') === '1' ? 'admin' : 'player' };
   // Faux backend admin en mémoire (admin-demo.js) ; les fichiers « envoyés » deviennent des object URLs.
@@ -64,12 +65,12 @@
   const da = () => demoAdmin || (demoAdmin = window.PapouthAdminDemo.create({ gamesFor: (l) => withMedia(gamesFor(l)), langs: ['fr', 'en', 'es', 'th', 'ms'] }));
   const wrapE = (fn) => { try { return R(fn()); } catch (e) { return Promise.resolve({ ok: false, error: { code: e.code || 'error', message: e.message } }); } };
   const files = new Map(); let fseq = 0;
-  const infoOf = (p) => { const f = files.get(p); if (!f) return null; const ext = (f.name.split('.').pop() || '').toLowerCase(); const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', mp4: 'video/mp4', zip: 'application/zip' }[ext] || ''; return { path: p, name: f.name, size: f.size, mime, kind: mime.startsWith('video/') ? 'video' : mime.startsWith('image/') ? 'image' : ext === 'zip' ? 'zip' : ext === 'json' ? 'json' : 'other' }; };
+  const infoOf = (p) => { const f = files.get(p); if (!f) return null; const ext = (f.name.split('.').pop() || '').toLowerCase(); const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', mp4: 'video/mp4', zip: 'application/zip', exe: 'application/octet-stream' }[ext] || ''; return { path: p, name: f.name, size: f.size, mime, kind: mime.startsWith('video/') ? 'video' : mime.startsWith('image/') ? 'image' : ext === 'zip' ? 'zip' : ext === 'exe' ? 'exe' : ext === 'json' ? 'json' : 'other' }; };
   const regFile = (f) => { const p = 'mock:' + (++fseq); files.set(p, f); return p; };
   const adminApi = {
     call: (method, path, body) => wrapE(() => da().handle(method, path, body)),
     pick: (kind) => new Promise((res) => {
-      const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = kind === 'media'; inp.accept = kind === 'media' ? '.jpg,.jpeg,.png,.webp,.mp4' : kind === 'json' ? '.json' : '.zip';
+      const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = kind === 'media'; inp.accept = kind === 'media' ? '.jpg,.jpeg,.png,.webp,.mp4' : kind === 'json' ? '.json' : '.zip,.exe';
       inp.onchange = () => res({ ok: true, data: [...inp.files].map((f) => infoOf(regFile(f))) }); inp.click();
     }),
     fileInfo: (paths) => R(paths.map(infoOf).filter(Boolean)),
@@ -103,10 +104,30 @@
     transferDevice: () => R({ ok: true, nextTransferAt: new Date(Date.now() + 30 * 864e5).toISOString() }),
     installed: () => R(installed), running: () => R([]),
     install: async (slug) => {
-      for (let i = 0; i <= 20; i++) { listeners.p.forEach((f) => f({ slug, stage: 'download', pct: i / 20 })); await new Promise((r) => setTimeout(r, 120)); }
-      const g = games.find((x) => x.slug === slug); installed[slug] = { version: g.version, exe: 'a.exe', path: 'C:\\x' };
-      listeners.p.forEach((f) => f({ slug, stage: 'done', pct: 1 })); return { ok: true, data: installed[slug] };
+      const g = games.find((x) => x.slug === slug);
+      if (jobsMock[slug]) return R({ jobId: jobsMock[slug].id, already: true });
+      const job = jobsMock[slug] = { id: ++jobN, cancelled: false };
+      (async () => {
+        const total = (g.sizeMb || 100) * 1048576;
+        const ev = (o) => listeners.p.forEach((f) => f({ slug, jobId: job.id, ...o }));
+        ev({ stage: 'prepare', pct: null }); await new Promise((r) => setTimeout(r, 400));
+        ev({ stage: 'download', pct: 0, bytes: 0, total });
+        let bytes = 0;
+        while (bytes < total && !job.cancelled) {
+          await new Promise((r) => setTimeout(r, 250)); bytes = Math.min(total, bytes + 3 * 1048576);
+          ev({ stage: 'download', bytes, total, pct: bytes / total, speed: 12 * 1048576, eta: Math.round((total - bytes) / (12 * 1048576)) });
+        }
+        if (!job.cancelled) { ev({ stage: 'extract', pct: null }); await new Promise((r) => setTimeout(r, 1500)); }
+        delete jobsMock[slug];
+        if (job.cancelled) return listeners.d.forEach((f) => f({ slug, jobId: job.id, ok: false, error: { code: 'cancelled', message: 'annulé' } }));
+        installed[slug] = { version: g.version, exe: 'a.exe', path: 'C:\\x' };
+        listeners.d.forEach((f) => f({ slug, jobId: job.id, ok: true, entry: installed[slug] }));
+      })();
+      return R({ jobId: job.id });
     },
+    cancelInstall: (slug) => { if (jobsMock[slug]) jobsMock[slug].cancelled = true; return R(true); },
+    onDone: (f) => { listeners.d.push(f); return () => {}; },
+    onAccessChanged: () => () => {}, onAccessRevoked: () => () => {},
     uninstall: (s) => { delete installed[s]; return R(true); },
     play: (slug) => { listeners.g.forEach((f) => f({ slug, running: true })); setTimeout(() => listeners.g.forEach((f) => f({ slug, running: false })), 5000); return R(true); },
     openFolder: () => R(true),

@@ -17,7 +17,7 @@ let demoState = { pass: null, owned: [] };
 let session = { user: null };
 const running = new Map(); // slug -> child
 const launchTokens = new Map(); // slug -> jeton de lancement en cours (vérifié par /license/heartbeat)
-const busy = new Set(); // slugs en cours d'installation
+let catalogCache = [];
 let hwidCache = null;
 
 const userData = () => app.getPath('userData');
@@ -176,8 +176,8 @@ function fileInfo(p) {
     if (!st.isFile()) return null;
     const ext = path.extname(p).toLowerCase();
     picked.add(p);
-    const mime = MEDIA_MIME[ext] || (ext === '.zip' ? 'application/zip' : '');
-    return { path: p, name: path.basename(p), size: st.size, mime, kind: mime.startsWith('video/') ? 'video' : mime.startsWith('image/') ? 'image' : ext === '.zip' ? 'zip' : ext === '.json' ? 'json' : 'other' };
+    const mime = MEDIA_MIME[ext] || (ext === '.zip' ? 'application/zip' : ext === '.exe' ? 'application/octet-stream' : '');
+    return { path: p, name: path.basename(p), size: st.size, mime, kind: mime.startsWith('video/') ? 'video' : mime.startsWith('image/') ? 'image' : ext === '.zip' ? 'zip' : ext === '.exe' ? 'exe' : ext === '.json' ? 'json' : 'other' };
   } catch (_) { return null; }
 }
 function demoAdmin() {
@@ -210,7 +210,7 @@ handle('admin:pick', async ({ kind }) => {
   const media = kind === 'media';
   const r = await dialog.showOpenDialog(win, {
     properties: media ? ['openFile', 'multiSelections'] : ['openFile'],
-    filters: media ? [{ name: 'Images / MP4', extensions: ['jpg', 'jpeg', 'png', 'webp', 'mp4'] }] : kind === 'json' ? [{ name: 'JSON', extensions: ['json'] }] : [{ name: 'ZIP', extensions: ['zip'] }]
+    filters: media ? [{ name: 'Images / MP4', extensions: ['jpg', 'jpeg', 'png', 'webp', 'mp4'] }] : kind === 'json' ? [{ name: 'JSON', extensions: ['json'] }] : [{ name: 'ZIP / EXE', extensions: ['zip', 'exe'] }]
   });
   return r.canceled ? [] : r.filePaths.map(fileInfo).filter(Boolean);
 });
@@ -233,8 +233,8 @@ handle('admin:upload', async ({ slug, kind, path: fp, id, version, exe }) => {
   const info = fileInfo(fp);
   if (!info) throw new ApiError('bad_request', 'Fichier introuvable.');
   const isBuild = kind === 'build';
-  const mime = isBuild ? 'application/zip' : info.mime;
-  if (!mime || (isBuild && info.kind !== 'zip')) throw new ApiError('unsupported_type', 'Format non accepté.');
+  const mime = isBuild ? (info.kind === 'exe' ? 'application/octet-stream' : 'application/zip') : info.mime;
+  if (!mime || (isBuild && info.kind !== 'zip' && info.kind !== 'exe')) throw new ApiError('unsupported_type', 'Format non accepté.');
   let last = 0;
   const onProgress = (pct) => { const now = Date.now(); if (pct >= 1 || now - last > 120) { last = now; send('admin:progress', { id, pct }); } };
   if (demoMode) {
@@ -260,7 +260,7 @@ function absolutize(data) {
   }
   return data;
 }
-handle('store:catalog', async (lang) => (demoMode ? { games: demo.gamesFor(lang) } : absolutize(await api.games(lang))));
+handle('store:catalog', async (lang) => { const r = demoMode ? { games: demo.gamesFor(lang) } : absolutize(await api.games(lang)); catalogCache = (r && r.games) || []; return r; });
 handle('store:entitlements', async () => (demoMode ? demo.entitlements(demoState) : api.entitlements()));
 handle('store:checkout', async ({ provider, product, slug, lang }) => {
   if (demoMode) {
@@ -306,35 +306,76 @@ handle('store:resume', async () => {
 handle('games:installed', async () => installer.readManifest());
 handle('games:running', async () => [...running.keys()]);
 
-handle('games:install', async (slug) => {
-  if (busy.has(slug)) throw new ApiError('busy', 'Une installation est déjà en cours.');
-  busy.add(slug);
-  const emit = (stage, pct) => send('games:progress', { slug, stage, pct });
+// Téléchargement/installation : tâche de fond. Le handler répond tout de suite avec un jobId ;
+// la progression (≈4/s) et la fin arrivent par 'games:progress' / 'games:done'. Aucune écriture synchrone.
+const jobs = new Map(); // slug -> { id, ac }
+let jobSeq = 0;
+function makeProgress(slug, jobId, total0) {
+  let last = 0, lastBytes = 0, lastT = Date.now(), speed = 0, stage = 'prepare';
+  const emit = (extra) => send('games:progress', { slug, jobId, stage, ...extra });
+  return {
+    stage: (s) => { stage = s; lastBytes = 0; lastT = Date.now(); speed = 0; emit({ pct: null }); },
+    tick: (bytes, total) => {
+      const now = Date.now();
+      if (now - last < 250 && !(total && bytes >= total)) return;
+      const dt = (now - lastT) / 1000;
+      if (dt > 0) { const inst = (bytes - lastBytes) / dt; speed = speed ? speed * 0.7 + inst * 0.3 : inst; }
+      last = now; lastT = now; lastBytes = bytes;
+      const tot = total || total0 || 0;
+      emit({ bytes, total: tot, pct: tot ? Math.min(1, bytes / tot) : null, speed: Math.round(speed), eta: tot && speed > 1 ? Math.round((tot - bytes) / speed) : null });
+    }
+  };
+}
+async function runInstallJob(slug, job) {
+  const pr = makeProgress(slug, job.id);
+  const signal = job.ac.signal;
   try {
+    pr.stage('prepare');
+    let entry;
     if (demoMode) {
       const g = demo.gamesFor('fr').find((x) => x.slug === slug);
-      for (let i = 0; i <= 20; i++) { emit('download', i / 20); await sleep(120); }
-      emit('extract', null); await sleep(600);
+      const total = (g.sizeMb || 100) * 1048576;
+      pr.stage('download');
+      for (let bytes = 0; bytes < total; bytes += 12 * 1048576 / 4) {
+        if (signal.aborted) throw new ApiError('cancelled', 'Téléchargement annulé.');
+        pr.tick(Math.min(bytes, total), total); await sleep(250);
+      }
+      pr.tick(total, total);
+      pr.stage('extract'); await sleep(1500);
+      if (signal.aborted) throw new ApiError('cancelled', 'Annulé.');
       const m = await installer.readManifest();
       m[slug] = { version: g.version, exe: slug + '.exe', path: path.join(cfg.GAMES_DIR, slug), demo: true };
       await installer.writeManifest(m);
-      return m[slug];
+      entry = m[slug];
+    } else {
+      const hwid = await getHwid();
+      try { await api.registerDevice(hwid, os.hostname()); }
+      catch (e) {
+        if (e.code === 'device_limit') throw new ApiError('device_limit', 'Ce compte est déjà utilisé sur un autre PC.', 403, e.extra);
+        throw e;
+      }
+      const info = await api.download(slug, hwid);
+      if (!info || !info.url) throw new ApiError('no_download', 'Aucun téléchargement disponible pour ce jeu.');
+      entry = await installer.install(slug, { ...info, name: job.name }, { signal, onProgress: pr.tick, onStage: (s) => pr.stage(s) });
     }
-    const hwid = await getHwid();
-    emit('prepare', null);
-    try { await api.registerDevice(hwid, os.hostname()); }
-    catch (e) {
-      if (e.code === 'device_limit') throw new ApiError('device_limit', 'Ce compte est déjà utilisé sur un autre PC.', 403, e.extra);
-      throw e;
-    }
-    const info = await api.download(slug, hwid);
-    if (!info || !info.url) throw new ApiError('no_download', 'Aucun téléchargement disponible pour ce jeu.');
-    return await installer.install(slug, info, emit);
+    send('games:done', { slug, jobId: job.id, ok: true, entry });
+  } catch (e) {
+    send('games:done', { slug, jobId: job.id, ok: false, error: { code: e.code || 'error', message: e.message || 'Erreur inconnue.', extra: e.extra } });
   } finally {
-    busy.delete(slug);
-    send('games:progress', { slug, stage: 'done', pct: 1 });
+    jobs.delete(slug);
   }
+}
+handle('games:install', async (slug) => {
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(String(slug))) throw new ApiError('bad_request', 'Jeu invalide.');
+  if (jobs.has(slug)) return { jobId: jobs.get(slug).id, already: true };
+  const g = catalogCache.find((x) => x.slug === slug);
+  const job = { id: ++jobSeq, ac: new AbortController(), name: g ? g.name : '' };
+  jobs.set(slug, job);
+  setImmediate(() => runInstallJob(slug, job));
+  return { jobId: job.id };
 });
+handle('games:cancel', async (slug) => { const j = jobs.get(slug); if (j) j.ac.abort(); return !!j; });
+handle('games:jobs', async () => [...jobs.entries()].map(([slug, j]) => ({ slug, jobId: j.id })));
 
 // ---------- Appareil autorisé (1 par compte) ----------
 let demoDevice = { id: 'demo-device', name: os.hostname(), registeredAt: new Date().toISOString(), lastSeenAt: new Date().toISOString() };
@@ -376,9 +417,16 @@ handle('games:play', async (slug) => {
   }
   const hwid = await getHwid();
   const { token } = await api.launchToken(slug, hwid);
-  const exePath = path.join(entry.path, entry.exe);
-  if (!fs.existsSync(exePath)) throw new ApiError('missing_exe', "Exécutable introuvable. Réinstallez le jeu.");
-  const child = spawn(exePath, ['--alien-token=' + token, '--papouth-token=' + token], { cwd: entry.path, detached: true, stdio: 'ignore', windowsHide: false });
+  let exePath = path.join(entry.path, entry.exe);
+  if (!fs.existsSync(exePath)) { // installation ancienne ou exe déplacé : on le retrouve (récursif) et on corrige installed.json
+    try {
+      const g = (catalogCache || []).find((x) => x.slug === slug);
+      entry.exe = await installer.resolveExe(entry.path, { exe: entry.exe, slug, name: g && g.name });
+      m[slug] = entry; await installer.writeManifest(m);
+      exePath = path.join(entry.path, entry.exe);
+    } catch (_) { throw new ApiError('missing_exe', "Exécutable introuvable. Réinstallez le jeu."); }
+  }
+  const child = spawn(exePath, ['--alien-token=' + token, '--papouth-token=' + token], { cwd: path.dirname(exePath), detached: true, stdio: 'ignore', windowsHide: false });
   launchTokens.set(slug, token);
   child.on('error', (e) => { running.delete(slug); launchTokens.delete(slug); syncPoll(); send('games:state', { slug, running: false, error: e.message }); });
   child.on('exit', () => { if (running.get(slug) === child) running.delete(slug); launchTokens.delete(slug); syncPoll(); send('games:state', { slug, running: false }); });

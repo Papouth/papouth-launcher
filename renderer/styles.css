@@ -284,3 +284,13 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow-wrap:an
 
 .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--muted,inherit);opacity:.8;text-decoration:underline;cursor:pointer;align-self:flex-start}
 .linkbtn:hover,.linkbtn:focus-visible{opacity:1}
+
+/* Téléchargements : indicateur permanent dans la barre du haut + bloc sur les cartes */
+.dlbar{display:flex;flex-wrap:wrap;gap:8px;margin-right:auto;min-width:0}
+.dlchip{display:flex;align-items:center;gap:8px;padding:4px 8px 4px 12px;background:var(--surface-2);border:var(--bd);border-radius:10px;font-size:12px;font-weight:700;max-width:100%}
+.dlchip .dn{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.dlchip .pl-label,.dlchip .pl-meta{color:var(--text-muted);font-weight:600}
+.dlchip .progress.mini{width:80px;height:8px;flex:none}
+.dlprog{display:flex;flex-direction:column;gap:6px}
+.dlprog .prow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px}
+.dlprog .pl-meta{font-size:12px;color:var(--text-muted)}

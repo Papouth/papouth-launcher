@@ -122,6 +122,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
           adm ? [h('div', { class: 'navsec' }, t('adm.section')), ...adm.nav().map((n) => h('button', { class: n.on ? 'on' : '', 'data-admin-tab': n.id, onclick: n.go }, n.icon, n.label))] : null),
         h('div', { class: 'foot' }, 'v' + (S.version || '1.0.0') + (S.demo ? t('foot.demo') : ''))),
       h('header', { class: 'top' },
+        dlBar(),
         h('button', { class: 'themebtn', id: 'theme-toggle', type: 'button', title: curTheme() === 'night' ? t('theme.toDay') : t('theme.toNight'), 'aria-label': curTheme() === 'night' ? t('theme.toDay') : t('theme.toNight'), onclick: () => setTheme(curTheme() === 'night' ? 'day' : 'night') }, themeIcon(curTheme() === 'night' ? 'day' : 'night')),
         adm ? h('span', { class: 'badge adminbadge' + (S.tab === 'admin' ? ' on' : ''), id: 'admin-badge' }, t('adm.badge')) : null,
         S.demo ? h('span', { class: 'badge demo' }, t('badge.demo')) : null,
@@ -202,15 +203,47 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         h('div', { class: 'meta' }, 'v' + g.version + (g.sizeMb ? ' · ' + t('card.size', { size: window.I18N.num(g.sizeMb) }) : '') + (inst ? ' · ' + t('card.installed', { version: inst.version }) : '')),
         actions));
   }
+  // ----- Progression des téléchargements (mise à jour ciblée du DOM, sans re-rendu complet) -----
+  const fmtSpeed = (b) => (b ? t('dl.mbps', { n: (b / 1048576).toLocaleString(window.I18N.lang(), { maximumFractionDigits: 1 }) }) : '');
+  const fmtEta = (s) => (s == null ? '' : t('dl.left', { time: Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') }));
+  const progLabel = (p) => (p.stage === 'extract' || p.stage === 'install' ? t('prog.extract') : p.stage === 'prepare' ? t('prog.prepare') : t('prog.download'));
+  const progPct = (p) => (p.stage === 'download' && p.pct != null ? Math.round(p.pct * 100) + '%' : '');
+  const progMeta = (p) => (p.stage === 'download' ? [fmtSpeed(p.speed), fmtEta(p.eta)].filter(Boolean).join(' · ') : '');
+  const gameName = (slug) => { const g = S.games.find((x) => x.slug === slug); return g ? g.name : slug; };
+  function progBlock(g, p) {
+    return h('div', { class: 'dlprog', 'data-prog': g.slug, 'data-stage': p.stage },
+      h('div', { class: 'plabel' }, h('span', { class: 'pl-label' }, progLabel(p)), h('span', { class: 'pl-pct' }, progPct(p))),
+      h('div', { class: 'progress' + (p.pct == null || p.stage !== 'download' ? ' ind' : '') }, h('i', { class: 'pb-fill', style: p.pct != null && p.stage === 'download' ? 'width:' + Math.round(p.pct * 100) + '%' : '' })),
+      h('div', { class: 'prow' }, h('span', { class: 'pl-meta' }, progMeta(p)),
+        p.stage === 'extract' || p.stage === 'install' ? null : h('button', { class: 'btn ghost sm', type: 'button', onclick: () => cancelInstall(g.slug) }, t('dl.cancel'))));
+  }
+  function dlBar() {
+    const list = Object.entries(S.progress);
+    if (!list.length) return null;
+    return h('div', { class: 'dlbar', role: 'status', 'aria-label': t('dl.title') }, list.map(([slug, p]) =>
+      h('div', { class: 'dlchip', 'data-dl': slug, 'data-stage': p.stage },
+        h('span', { class: 'dn' }, gameName(slug)),
+        h('span', { class: 'pl-label' }, progLabel(p)), h('span', { class: 'pl-pct' }, progPct(p)), h('span', { class: 'pl-meta' }, progMeta(p)),
+        h('div', { class: 'progress mini' + (p.pct == null || p.stage !== 'download' ? ' ind' : '') }, h('i', { class: 'pb-fill', style: p.pct != null && p.stage === 'download' ? 'width:' + Math.round(p.pct * 100) + '%' : '' })),
+        p.stage === 'extract' || p.stage === 'install' ? null : h('button', { class: 'btn ghost sm', type: 'button', title: t('dl.cancel'), 'aria-label': t('dl.cancel'), onclick: () => cancelInstall(slug) }, '×'))));
+  }
+  function patchProgress(slug) {
+    const p = S.progress[slug]; if (!p) return;
+    const els = document.querySelectorAll('[data-prog="' + slug + '"],[data-dl="' + slug + '"]');
+    for (const el of els) {
+      if (el.dataset.stage !== p.stage) { render(); return; }
+      const set = (sel, v) => { const n = el.querySelector(sel); if (n && n.textContent !== v) n.textContent = v; };
+      set('.pl-label', progLabel(p)); set('.pl-pct', progPct(p)); set('.pl-meta', progMeta(p));
+      const f = el.querySelector('.pb-fill'); if (f && p.pct != null) f.style.width = Math.round(p.pct * 100) + '%';
+    }
+  }
+  function cancelInstall(slug) { call(A.cancelInstall(slug)).catch((e) => toast(errText(e), 'error')); }
   function actionsFor(g, ctx) {
     const state = gameState(g);
     const prog = S.progress[g.slug];
     const actions = h('div', { class: 'actions' });
     if (prog) {
-      const label = prog.stage === 'extract' ? t('prog.extract') : prog.stage === 'prepare' ? t('prog.prepare') : t('prog.download');
-      actions.append(
-        h('div', { class: 'plabel' }, h('span', {}, label), prog.pct != null && prog.stage === 'download' ? h('span', {}, Math.round(prog.pct * 100) + '%') : null),
-        h('div', { class: 'progress' + (prog.pct == null ? ' ind' : '') }, h('i', { style: prog.pct != null ? 'width:' + Math.round(prog.pct * 100) + '%' : '' })));
+      actions.append(progBlock(g, prog));
     } else if (state === 'locked') {
       actions.append(
         h('button', { class: 'btn primary', onclick: () => payModal({ product: 'game', slug: g.slug, title: t('card.buyTitle', { name: g.name }), price: money(g.price || 40) }) }, t('card.buy', { price: money(g.price || 40) })),
@@ -421,14 +454,23 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
 
   // ---------- actions jeux ----------
   async function install(g) {
+    if (S.progress[g.slug]) return; // pas de double démarrage
     S.progress[g.slug] = { stage: 'prepare', pct: null }; render();
-    try { await call(A.install(g.slug)); toast(t('toast.ready', { name: g.name })); }
-    catch (e) {
-      if (e.code === 'device_limit') { delete S.progress[g.slug]; render(); deviceModal(e.extra || {}, () => install(g)); return; }
-      toast(errText(e), 'error');
-    }
-    delete S.progress[g.slug];
-    S.installed = unwrap(await A.installed()) || {}; render();
+    toast(t('dl.started', { name: g.name }));
+    try { await call(A.install(g.slug)); } // rend la main aussitôt : le travail se fait en tâche de fond
+    catch (e) { delete S.progress[g.slug]; render(); toast(errText(e), 'error'); }
+  }
+  async function onInstallDone(d) {
+    delete S.progress[d.slug];
+    const g = S.games.find((x) => x.slug === d.slug) || { slug: d.slug, name: d.slug };
+    try { S.installed = unwrap(await A.installed()) || {}; } catch (_) { /* inchangé */ }
+    render();
+    if (d.ok) return toast(t('toast.ready', { name: g.name }));
+    const e = d.error || {};
+    if (e.code === 'cancelled') return toast(t('dl.cancelled', { name: g.name }));
+    if (e.code === 'device_limit') return deviceModal(e.extra || {}, () => install(g));
+    if (e.code === 'exe_not_found') return toast(t('err.exe_not_found') + (e.extra && e.extra.found ? ' (' + e.extra.found + ')' : ''), 'error');
+    toast(errText(e), 'error');
   }
   // Compte déjà utilisé sur un autre PC : proposer de basculer sur ce PC (1 changement / 30 jours)
   function deviceModal(info, retry) {
@@ -505,9 +547,11 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
 
   // ---------- événements du main ----------
   A.onProgress((p) => {
-    if (p.stage === 'done') delete S.progress[p.slug]; else S.progress[p.slug] = p;
-    render();
+    if (p.stage === 'done' || !S.progress[p.slug]) return;
+    S.progress[p.slug] = p;
+    patchProgress(p.slug);
   });
+  A.onDone(onInstallDone);
   A.onGameState((s) => { if (s.running) S.running.add(s.slug); else S.running.delete(s.slug); if (s.error) toast(t('toast.launchFail', { error: s.error }), 'error'); render(); });
   // Droits modifiés côté serveur (temps réel) : on met à jour sans attendre
   A.onAccessChanged((ent) => { if (ent && S.user) { S.ent = ent; render(); } });

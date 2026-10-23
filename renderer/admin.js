@@ -417,8 +417,14 @@
           row(t('adm.build.date'), d.uploadedAt ? fmtDate(d.uploadedAt) : null), row(t('adm.build.size'), d.size ? t('card.size', { size: window.I18N.num(Math.round(d.size / 1048576)) }) : null), row(t('adm.build.file'), d.originalName))
         : h('div', { class: 'warn' }, d.mode === 'github' ? t('adm.build.github', { repo: d.github || '—' }) : d.mode === 'url' ? t('adm.build.url') : t('adm.build.nobuild'));
       const bu = E.buildUp;
-      return h('section', { class: 'panel wide' }, h('h2', { class: 'ptitle' }, t('adm.sec.build')), h('p', { class: 'sub' }, t('adm.build.hint')), sent, info,
-        h('div', { class: 'fgrid' }, fld(t('adm.f.exe'), h('input', { type: 'text', maxlength: 80, ...bind('exe') }), t('adm.f.exeHint'))),
+      const names = [...new Set((d.exeCandidates || []).map((c) => c.split('/').pop()))];
+      const kindRow = d.hasBuild && d.kind ? h('dl', { class: 'kv sm' }, row(t('adm.build.kind'), t('adm.build.kind.' + (d.kind === 'installer' ? 'installer' : 'portable'))),
+        d.kind === 'installer' ? row(t('adm.build.exeDetected'), names[0] || '—') : row(t('adm.build.exeDetected'), d.exe || '—')) : null;
+      const nf = d.hasBuild && d.kind !== 'installer' && !names.length ? h('div', { class: 'warn' }, t('adm.build.notFound')) : null;
+      const pickExe = d.kind !== 'installer' && names.length > 1
+        ? fld(t('adm.build.exePick'), h('select', { onchange: (ev) => { E.f.exe = ev.target.value; touch(); keepScroll(render); } }, names.map((n) => h('option', { value: n, selected: n.toLowerCase() === String(E.f.exe).toLowerCase() }, n)))) : null;
+      return h('section', { class: 'panel wide' }, h('h2', { class: 'ptitle' }, t('adm.sec.build')), h('p', { class: 'sub' }, t('adm.build.hint')), h('p', { class: 'sub' }, t('adm.build.tip')), sent, info, kindRow, nf,
+        h('div', { class: 'fgrid' }, fld(t('adm.f.exe'), h('input', { type: 'text', maxlength: 80, ...bind('exe') }), t('adm.f.exeHint')), pickExe),
         bu ? h('div', { class: 'upl', 'data-up': bu.id }, h('span', { class: 'un' }, bu.name), bu.error ? h('span', { class: 'err' }, bu.error) : h('span', { class: 'pct' }, Math.round(bu.pct * 100) + '%'),
           bu.error ? h('button', { class: 'btn sm ghost', type: 'button', onclick: () => { E.buildUp = null; keepScroll(render); } }, '×') : h('div', { class: 'progress' }, h('i', { style: 'width:' + Math.round(bu.pct * 100) + '%' }))) : null,
         h('div', { class: 'row' }, h('button', { class: 'btn primary', type: 'button', id: 'build-pick', disabled: !!(bu && !bu.error), onclick: sendBuild }, t('adm.build.send'))));
@@ -428,11 +434,11 @@
       let infos;
       try { infos = await call(A.admin.pick('build')); } catch (e) { toast(errText(e), 'error'); return; }
       const info = infos && infos[0]; if (!info) return;
-      if (info.kind !== 'zip') { toast(t('adm.err.zip'), 'error'); return; }
+      if (info.kind !== 'zip' && info.kind !== 'exe') { toast(t('adm.err.zip'), 'error'); return; }
       const bu = { id: 'u' + (++upSeq), name: info.name, pct: 0, error: null }; E.buildUp = bu; keepScroll(render);
       try {
         const r = await call(A.admin.upload({ slug: E.game.slug, kind: 'build', path: info.path, id: bu.id, version: E.f.version.trim(), exe: E.f.exe.trim() || undefined }));
-        E.buildUp = null; E.game = r.game; E.f.version = r.game.version; E.f.sizeMb = String(r.game.sizeMb);
+        E.buildUp = null; E.game = r.game; if (r.game.download && r.game.download.exe) E.f.exe = r.game.download.exe; E.f.version = r.game.version; E.f.sizeMb = String(r.game.sizeMb);
         toast(t('adm.build.done'));
       } catch (e) { bu.error = errText(e); }
       if (M.edit === E) keepScroll(render);

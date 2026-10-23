@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('alien', {
   installed: () => call('games:installed'),
   running: () => call('games:running'),
   install: (slug) => call('games:install', slug),
+  cancelInstall: (slug) => call('games:cancel', slug),
+  jobs: () => call('games:jobs'),
   uninstall: (slug) => call('games:uninstall', slug),
   play: (slug) => call('games:play', slug),
   openFolder: (slug) => call('games:openFolder', slug),
@@ -43,6 +45,7 @@ contextBridge.exposeInMainWorld('alien', {
     onProgress: on('admin:progress')
   },
   onProgress: on('games:progress'),
+  onDone: on('games:done'),
   onGameState: on('games:state'),
   onAccessChanged: on('access:changed'),
   onAccessRevoked: on('access:revoked'),
