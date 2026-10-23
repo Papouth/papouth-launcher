@@ -426,7 +426,9 @@ handle('games:play', async (slug) => {
       exePath = path.join(entry.path, entry.exe);
     } catch (_) { throw new ApiError('missing_exe', "Exécutable introuvable. Réinstallez le jeu."); }
   }
-  const child = spawn(exePath, ['--alien-token=' + token, '--papouth-token=' + token], { cwd: path.dirname(exePath), detached: true, stdio: 'ignore', windowsHide: false });
+  const env = { ...process.env };
+  for (const k of Object.keys(env)) if (/^ELECTRON_|^NODE_OPTIONS$/i.test(k)) delete env[k]; // le jeu (souvent Electron lui aussi) ne doit pas hériter de l'environnement du launcher
+  const child = spawn(exePath, ['--alien-token=' + token, '--papouth-token=' + token], { cwd: path.dirname(exePath), detached: true, stdio: 'ignore', windowsHide: false, env });
   launchTokens.set(slug, token);
   child.on('error', (e) => { running.delete(slug); launchTokens.delete(slug); syncPoll(); send('games:state', { slug, running: false, error: e.message }); });
   child.on('exit', () => { if (running.get(slug) === child) running.delete(slug); launchTokens.delete(slug); syncPoll(); send('games:state', { slug, running: false }); });

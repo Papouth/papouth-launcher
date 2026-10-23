@@ -12,6 +12,14 @@ const extract = require('extract-zip');
 const cfg = require('../config');
 const { ApiError } = require('./api');
 
+// Les jeux Electron contiennent des fichiers .asar : sans ça, le fs patché d'Electron les traite
+// comme des dossiers et écrit/lit/supprime ces fichiers de travers ("Invalid package ... app.asar").
+let asarDepth = 0;
+async function noAsar(fn) {
+  if (asarDepth++ === 0) process.noAsar = true;
+  try { return await fn(); } finally { if (--asarDepth === 0) process.noAsar = false; }
+}
+
 async function readManifest() {
   try { return JSON.parse(await fsp.readFile(cfg.MANIFEST_FILE, 'utf8')); } catch (_) { return {}; }
 }
@@ -261,4 +269,9 @@ async function uninstall(slug) {
   await writeManifest(m);
 }
 
-module.exports = { migrateLegacy, readManifest, writeManifest, install, uninstall, resolveExe, installerFlavor };
+const _install = install, _uninstall = uninstall, _resolveExe = resolveExe, _migrate = migrateLegacy;
+module.exports = {
+  migrateLegacy: () => noAsar(_migrate), readManifest, writeManifest,
+  install: (...a) => noAsar(() => _install(...a)), uninstall: (...a) => noAsar(() => _uninstall(...a)),
+  resolveExe: (...a) => noAsar(() => _resolveExe(...a)), installerFlavor
+};
