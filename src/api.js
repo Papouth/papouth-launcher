@@ -84,11 +84,17 @@ class StoreApi {
   entitlements() { return this.request('GET', '/entitlements'); }
   library() { return this.request('GET', '/library'); }
   libraryAdd(slug) { return this.request('POST', '/library/add', { slug }); }
-  checkout(provider, product, slug, lang) {
+  checkout(provider, product, slug, lang, promo) {
     const body = { provider, product };
     if (slug) body.slug = slug;
     if (lang) body.lang = lang;
+    if (promo) body.promo = promo;
     return this.request('POST', '/checkout', body);
+  }
+  promoCheck(code, product, slug) {
+    const body = { code, product };
+    if (slug) body.slug = slug;
+    return this.request('POST', '/promo/check', body);
   }
   changePassword(current, newPassword, lang) { return this.request('POST', '/auth/change-password', { current, new: newPassword, lang }); }
   billingPortal(lang) { return this.request('POST', '/billing/portal', lang ? { lang } : {}); }

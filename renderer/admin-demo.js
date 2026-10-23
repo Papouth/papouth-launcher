@@ -87,6 +87,28 @@
       };
     };
 
+    // ---- codes promo (démo, en mémoire) ----
+    const promos = [{ id: 'pr1', code: 'BIENVENUE20', type: 'percent', value: 20, appliesTo: { passMonthly: true, passYearly: true, allGames: true, games: [] }, passScope: 'first', startsAt: null, endsAt: null, maxUses: 100, onePerUser: true, note: 'Lancement', paused: false, uses: 12, revenueCents: 28800, refunded: 0 }];
+    const promoBody = (p) => ({ code: p.code, type: p.type, value: p.value, appliesTo: p.appliesTo, passScope: p.passScope, startsAt: p.startsAt, endsAt: p.endsAt, maxUses: p.maxUses, onePerUser: p.onePerUser, note: p.note });
+    function promoIn(b, cur) {
+      const code = String(b.code || '').trim().toUpperCase();
+      if (!/^[A-Z0-9_-]{3,30}$/.test(code)) throw err('invalid_code', 'Code invalide : 3 à 30 caractères (A-Z, 0-9, - et _).');
+      if (promos.some((x) => x.code === code && x !== cur)) throw err('code_taken', 'Ce code existe déjà.');
+      const value = Number(b.value);
+      if (!Number.isInteger(value) || value < 1 || (b.type === 'percent' && value > 100)) throw err('invalid_value', 'Valeur de remise invalide.');
+      const ap = b.appliesTo || {};
+      if (!ap.passMonthly && !ap.passYearly && !ap.allGames && !(ap.games || []).length) throw err('invalid_applies', 'Choisissez au moins un produit.');
+      return { id: cur ? cur.id : 'pr' + rid(), code, type: b.type === 'amount' ? 'amount' : 'percent', value, appliesTo: { passMonthly: !!ap.passMonthly, passYearly: !!ap.passYearly, allGames: !!ap.allGames, games: ap.allGames ? [] : (ap.games || []) },
+        passScope: b.passScope === 'all' ? 'all' : 'first', startsAt: b.startsAt || null, endsAt: b.endsAt || null, maxUses: b.maxUses == null ? null : Number(b.maxUses), onePerUser: b.onePerUser !== false, note: String(b.note || ''),
+        paused: cur ? cur.paused : false, uses: cur ? cur.uses : 0, revenueCents: cur ? cur.revenueCents : 0, refunded: cur ? cur.refunded : 0 };
+    }
+    function promoOut(p) {
+      const t = Date.now(), end = p.endsAt ? Date.parse(p.endsAt + 'T23:59:59Z') : null, start = p.startsAt ? Date.parse(p.startsAt) : null;
+      const status = p.paused ? 'paused' : end && end < t ? 'expired' : p.maxUses != null && p.uses >= p.maxUses ? 'exhausted' : start && start > t ? 'scheduled' : 'active';
+      const label = p.type === 'percent' ? '-' + p.value + ' %' : '-' + String(p.value / 100).replace('.', ',') + ' €';
+      return { ...p, label, status, usesLive: 0, usesTest: p.uses, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    }
+
     function handle(method, route, body) {
       const u = new URL(route, 'http://x');
       const seg = u.pathname.split('/').filter(Boolean).slice(1); // sans "admin"
@@ -94,6 +116,21 @@
       const key = method + ' ' + seg[0] + (seg[1] ? ' :slug' : '') + (seg[2] ? ' ' + seg[2] : '') + (seg[3] ? ' :id' : '');
       switch (key) {
         case 'GET games': return { games: sorted().map(out) };
+        case 'GET promos': return { promos: promos.map(promoOut), mode: 'test', games: sorted().filter((g) => !g.free).map((g) => ({ slug: g.slug, name: g.name, status: g.status })) };
+        case 'POST promos': {
+          const p = promoIn(b, null); promos.unshift(p); audit('promo.create', p.code, promoOut(p).label);
+          return { promo: promoOut(p) };
+        }
+        case 'PATCH promos :slug': {
+          const p = promos.find((x) => x.id === seg[1]); if (!p) throw err('not_found', 'Code promo introuvable.');
+          if (Object.keys(b).length === 1 && typeof b.paused === 'boolean') { p.paused = b.paused; audit(b.paused ? 'promo.pause' : 'promo.resume', p.code); }
+          else { Object.assign(p, promoIn({ ...promoBody(p), ...b }, p)); audit('promo.update', p.code); }
+          return { promo: promoOut(p) };
+        }
+        case 'DELETE promos :slug': {
+          const i = promos.findIndex((x) => x.id === seg[1]); if (i < 0) throw err('not_found', 'Code promo introuvable.');
+          const [p] = promos.splice(i, 1); audit('promo.delete', p.code); return { ok: true };
+        }
         case 'PUT games :slug': { // /admin/games/order
           if (seg[1] !== 'order') break;
           (b.slugs || []).forEach((s, i) => { const g = games.find((x) => x.slug === s); if (g) g.sortOrder = i; });

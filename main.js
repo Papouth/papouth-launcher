@@ -268,7 +268,24 @@ handle('store:libraryAdd', async (slug) => {
   if (demoMode) { if (!demoState.obtained.includes(slug)) demoState.obtained.push(slug); return { ok: true, obtained: demoState.obtained.slice() }; }
   return api.libraryAdd(slug);
 });
-handle('store:checkout', async ({ provider, product, slug, lang }) => {
+// Prix recalculé par le serveur ; en démo, un seul code d'exemple.
+const DEMO_PRICES = { pass_monthly: 30, pass_yearly: 240 };
+handle('store:promoCheck', async ({ code, product, slug }) => {
+  const c = String(code || '').trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{3,30}$/.test(c)) throw new ApiError('promo_unknown', 'Code inconnu.');
+  if (!['game', 'pass_monthly', 'pass_yearly'].includes(product)) throw new ApiError('bad_request', 'Produit invalide.');
+  if (slug != null && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(String(slug))) throw new ApiError('bad_request', 'Jeu invalide.');
+  if (demoMode) {
+    if (c !== 'BIENVENUE20') throw new ApiError('promo_unknown', 'Code inconnu.');
+    const g = product === 'game' ? (catalogCache || []).find((x) => x.slug === slug) : null;
+    const original = product === 'game' ? Number((g && g.price) || 40) : DEMO_PRICES[product];
+    const final = Math.round(original * 80) / 100;
+    return { ok: true, code: c, label: '-20 %', product, originalPrice: original, finalPrice: final, free: false };
+  }
+  return api.promoCheck(c, product, slug);
+});
+handle('store:checkout', async ({ provider, product, slug, lang, promo }) => {
+  if (promo != null && !/^[A-Z0-9_-]{3,30}$/.test(String(promo))) throw new ApiError('promo_unknown', 'Code inconnu.');
   if (demoMode) {
     // Simule un paiement validé après quelques secondes.
     setTimeout(() => {
@@ -277,7 +294,8 @@ handle('store:checkout', async ({ provider, product, slug, lang }) => {
     }, 4000);
     return { url: null };
   }
-  const r = await api.checkout(provider, product, slug, lang);
+  const r = await api.checkout(provider, product, slug, lang, promo || undefined);
+  if (r && r.granted) return { url: null, granted: true }; // jeu offert par le code : aucun paiement
   if (!r || !/^https?:\/\//i.test(r.url || '')) throw new ApiError('bad_url', 'URL de paiement invalide.');
   await shell.openExternal(r.url);
   return { url: r.url };

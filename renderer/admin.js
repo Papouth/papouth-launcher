@@ -10,26 +10,28 @@
 
   const slugify = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, ' ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   const pad3 = (a) => { const r = (a || []).slice(0, 6); while (r.length < 3) r.push(''); return r; };
+  const emptyPromo = () => ({ id: null, code: '', type: 'percent', value: '20', passMonthly: false, passYearly: false, allGames: true, games: [], passScope: 'first', startsAt: '', endsAt: '', maxUses: '', onePerUser: true, note: '' });
 
   function create(ctx) {
     const { A, h, t, svg, S, render, call, toast, errText, money, fmtDate, saleView } = ctx;
     const adm = (method, path, body) => call(A.admin.call(method, path, body));
-    const M = { tab: 'games', games: null, edit: null, users: null, q: '', stats: null, resetArmed: false, log: null, pay: null, paying: false, preview: null, busy: false };
+    const M = { tab: 'games', games: null, edit: null, users: null, q: '', stats: null, promos: null, promoMeta: { mode: 'test', games: [] }, promoForm: null, resetArmed: false, log: null, pay: null, paying: false, preview: null, busy: false };
     let upSeq = 0;
 
     const ICONS = {
       games: 'M6 11h4M8 9v4M15 12h.01M18 10h.01M7 6h10a4 4 0 014 4v4a4 4 0 01-4 4h-1.5L14 16h-4l-1.5 2H7a4 4 0 01-4-4v-4a4 4 0 014-4z',
+      promos: 'M3 12V4h8l10 10-8 8zM7.5 8.5h.01',
       users: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.5a3.5 3.5 0 010 6.5M18 14.8c2.2.6 3.5 2.3 3.5 5.2',
       stats: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
       payments: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 10h18M7 15h4',
       log: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7',
       admin: 'M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z'
     };
-    const tabs = ['games', 'users', 'stats', 'payments', 'log'];
+    const tabs = ['games', 'users', 'promos', 'stats', 'payments', 'log'];
 
     // ---------- navigation ----------
     const canLeave = () => !M.edit || !M.edit.dirty || confirm(t('adm.unsaved'));
-    function leaveEditor() { M.edit = null; M.preview = null; }
+    function leaveEditor() { M.edit = null; M.preview = null; M.promoForm = null; }
     function keepScroll(fn) {
       const m = document.querySelector('.main'); const y = m ? m.scrollTop : 0;
       fn();
@@ -47,6 +49,7 @@
       try {
         if (tab === 'games') M.games = (await adm('GET', '/admin/games')).games;
         else if (tab === 'users') M.users = (await adm('GET', '/admin/users?q=' + encodeURIComponent(M.q))).users;
+        else if (tab === 'promos') { const r = await adm('GET', '/admin/promos'); M.promos = r.promos; M.promoMeta = { mode: r.mode, games: r.games || [] }; }
         else if (tab === 'stats') { M.resetArmed = false; M.stats = await adm('GET', '/admin/stats'); }
         else if (tab === 'payments') M.pay = await adm('GET', '/admin/payments/status');
         else if (tab === 'log') M.log = (await adm('GET', '/admin/log?limit=200')).log;
@@ -720,6 +723,103 @@
       modal(t('adm.rv.title'), body, [h('button', { class: 'btn ghost', type: 'button', id: 'revoke-close', onclick: closeModal }, t('adm.rv.close'))]);
       reload().then(draw).catch(() => {}); // données fraîches du serveur (accès + origines)
     }
+    // ---------- codes promo ----------
+    const promoStatus = (st) => h('span', { class: 'chip st promo-st ' + (st === 'active' ? 'pub' : st === 'expired' || st === 'exhausted' ? 'alt' : 'draft'), 'data-status': st }, t('adm.promo.st.' + st));
+    const promoApplies = (p) => {
+      const a = p.appliesTo, out = [];
+      if (a.passMonthly) out.push(t('adm.promo.f.passMonthly'));
+      if (a.passYearly) out.push(t('adm.promo.f.passYearly'));
+      if (a.allGames) out.push(t('adm.promo.f.allGames'));
+      else for (const s of a.games) out.push(gameName(s));
+      return out;
+    };
+    async function copyText(txt) {
+      try { await navigator.clipboard.writeText(txt); } catch (_) { try { const ta = h('textarea', { readonly: true }); ta.value = txt; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); } catch (__) { /* copie manuelle possible */ } }
+      toast(t('adm.promo.copied', { code: txt }));
+    }
+    async function promoOp(fn, okMsg) {
+      try { await fn(); toast(okMsg); await load('promos'); } catch (e) { toast(errText(e), 'error'); }
+    }
+    function promoFormOf(p) {
+      const eur = (c) => String(c / 100).replace('.', ',');
+      return { id: p.id, code: p.code, type: p.type, value: p.type === 'percent' ? String(p.value) : eur(p.value), passMonthly: p.appliesTo.passMonthly, passYearly: p.appliesTo.passYearly, allGames: p.appliesTo.allGames, games: p.appliesTo.games.slice(),
+        passScope: p.passScope, startsAt: p.startsAt ? p.startsAt.slice(0, 10) : '', endsAt: p.endsAt ? p.endsAt.slice(0, 10) : '', maxUses: p.maxUses == null ? '' : String(p.maxUses), onePerUser: p.onePerUser, note: p.note || '' };
+    }
+    function promoPayload(f) {
+      const value = f.type === 'percent' ? parseInt(f.value, 10) : Math.round(parseFloat(String(f.value).replace(',', '.')) * 100);
+      if (!Number.isFinite(value) || value < 1) throw Object.assign(new Error(t('adm.promo.err.value')), { code: 'invalid_value' });
+      if (!f.passMonthly && !f.passYearly && !f.allGames && !f.games.length) throw Object.assign(new Error(t('adm.promo.err.pick')), { code: 'invalid_applies' });
+      const max = String(f.maxUses).trim();
+      return { code: f.code.trim(), type: f.type, value, appliesTo: { passMonthly: f.passMonthly, passYearly: f.passYearly, allGames: f.allGames, games: f.allGames ? [] : f.games },
+        passScope: f.passScope, startsAt: f.startsAt || null, endsAt: f.endsAt || null, maxUses: max ? Number(max) : null, onePerUser: f.onePerUser, note: f.note.trim() };
+    }
+    async function savePromo() {
+      const f = M.promoForm; if (!f) return;
+      try {
+        const body = promoPayload(f);
+        if (f.id) await adm('PATCH', '/admin/promos/' + encodeURIComponent(f.id), body); else await adm('POST', '/admin/promos', body);
+        M.promoForm = null; toast(t('adm.promo.saved')); await load('promos'); render();
+      } catch (e) { toast(errText(e), 'error'); }
+    }
+    function promoFormView() {
+      const f = M.promoForm, redraw = () => keepScroll(render);
+      const gl = M.promoMeta.games || [];
+      const chk = (id, label, key, extra) => h('label', { class: 'tog' }, h('input', { type: 'checkbox', id, checked: !!f[key], onchange: (ev) => { f[key] = ev.target.checked; if (extra) extra(); } }), label);
+      const toggleGame = (slug, on) => { f.games = on ? [...new Set([...f.games, slug])] : f.games.filter((x) => x !== slug); };
+      const pass = f.passMonthly || f.passYearly;
+      return h('div', { class: 'adm editor' },
+        head(f.id ? t('adm.promo.edit') : t('adm.promo.new'), null,
+          h('button', { class: 'btn ghost', type: 'button', id: 'promo-cancel', onclick: () => { M.promoForm = null; render(); } }, '‹ ' + t('adm.back')),
+          h('button', { class: 'btn primary', type: 'button', id: 'promo-save', onclick: savePromo }, t('adm.save'))),
+        h('section', { class: 'panel wide' },
+          h('div', { class: 'fgrid' },
+            fld(t('adm.promo.f.code'), h('input', { type: 'text', id: 'promo-code', maxlength: 30, value: f.code, autocapitalize: 'characters', spellcheck: 'false', oninput: (ev) => { f.code = ev.target.value.toUpperCase(); ev.target.value = f.code; } }), t('adm.promo.f.codeHint')),
+            h('div', { class: 'fld' }, h('span', {}, t('adm.promo.f.discount')),
+              h('div', { class: 'row' },
+                h('select', { id: 'promo-type', 'aria-label': t('adm.promo.f.discount'), onchange: (ev) => { f.type = ev.target.value; f.value = ''; redraw(); } },
+                  ['percent', 'amount'].map((k) => h('option', { value: k, selected: f.type === k }, t('adm.promo.f.type.' + k)))),
+                h('input', { type: 'text', inputmode: 'decimal', id: 'promo-value', 'aria-label': t('adm.promo.f.value'), value: f.value, placeholder: f.type === 'percent' ? '20' : '5', oninput: (ev) => { f.value = ev.target.value; } })))),
+          h('div', { class: 'fld pfld' }, h('span', {}, t('adm.promo.f.applies')),
+            h('div', { class: 'checks' },
+              chk('promo-pass-m', t('adm.promo.f.passMonthly'), 'passMonthly', redraw), chk('promo-pass-y', t('adm.promo.f.passYearly'), 'passYearly', redraw),
+              chk('promo-all-games', t('adm.promo.f.allGames'), 'allGames', redraw)),
+            !f.allGames ? h('div', { class: 'checks games' }, gl.length ? gl.map((g) => h('label', { class: 'tog' }, h('input', { type: 'checkbox', 'data-game': g.slug, checked: f.games.includes(g.slug), onchange: (ev) => toggleGame(g.slug, ev.target.checked) }), g.name)) : h('small', {}, t('adm.promo.f.noGames'))) : null,
+            h('small', {}, t('adm.promo.f.freeHint'))),
+          pass ? h('div', { class: 'fld pfld' }, h('span', {}, t('adm.promo.f.scope')),
+            h('div', { class: 'checks' }, ['first', 'all'].map((k) => h('label', { class: 'tog' }, h('input', { type: 'radio', name: 'promo-scope', value: k, checked: f.passScope === k, onchange: () => { f.passScope = k; } }), t('adm.promo.f.scope.' + k))))) : null,
+          h('div', { class: 'fgrid' },
+            fld(t('adm.promo.f.starts'), h('input', { type: 'date', id: 'promo-starts', value: f.startsAt, oninput: (ev) => { f.startsAt = ev.target.value; } })),
+            fld(t('adm.promo.f.ends'), h('input', { type: 'date', id: 'promo-ends', value: f.endsAt, oninput: (ev) => { f.endsAt = ev.target.value; } })),
+            fld(t('adm.promo.f.max'), h('input', { type: 'text', inputmode: 'numeric', id: 'promo-max', value: f.maxUses, oninput: (ev) => { f.maxUses = ev.target.value; } }), t('adm.promo.f.maxHint')),
+            fld(t('adm.promo.f.note'), h('input', { type: 'text', id: 'promo-note', maxlength: 200, value: f.note, placeholder: t('adm.promo.f.notePh'), oninput: (ev) => { f.note = ev.target.value; } }))),
+          chk('promo-one', t('adm.promo.f.onePer'), 'onePerUser')));
+    }
+    function promosView() {
+      if (M.promoForm) return promoFormView();
+      const list = M.promos, num = window.I18N.num;
+      const openForm = async (p) => { await ensureGames(); M.promoForm = p ? promoFormOf(p) : emptyPromo(); render(); };
+      const rows = (list || []).map((p) => h('div', { class: 'prow', 'data-code': p.code },
+        h('div', { class: 'pinfo' }, h('b', { class: 'pcode' }, p.code), p.note ? h('small', {}, p.note) : null,
+          h('small', {}, [p.startsAt ? t('adm.promo.from', { date: fmtDate(p.startsAt) }) : null, p.endsAt ? t('adm.promo.until', { date: fmtDate(p.endsAt) }) : null].filter(Boolean).join(' · '))),
+        h('div', { class: 'pmeta' }, promoStatus(p.status), h('span', { class: 'chip st alt promo-label' }, p.label),
+          promoApplies(p).map((x) => h('span', { class: 'chip st alt' }, x)),
+          p.appliesTo.passMonthly || p.appliesTo.passYearly ? h('small', {}, p.passScope === 'all' ? t('adm.promo.allShort') : t('adm.promo.firstShort')) : null),
+        h('div', { class: 'pnum' },
+          h('div', {}, h('small', {}, t('adm.promo.uses')), h('b', { class: 'puses' }, p.maxUses != null ? num(p.uses) + ' / ' + num(p.maxUses) : num(p.uses))),
+          h('div', {}, h('small', {}, t('adm.promo.revenue')), h('b', { class: 'prev' }, money(p.revenueCents / 100))),
+          p.refunded ? h('small', { class: 'prefund' }, t('adm.promo.refunded', { n: p.refunded })) : null),
+        h('div', { class: 'pact' },
+          h('button', { class: 'btn sm', type: 'button', 'data-copy': p.code, onclick: () => copyText(p.code) }, t('adm.promo.copy')),
+          h('button', { class: 'btn sm', type: 'button', 'data-edit': p.code, onclick: () => openForm(p) }, t('adm.edit')),
+          h('button', { class: 'btn sm ghost', type: 'button', 'data-pause': p.code, onclick: () => promoOp(() => adm('PATCH', '/admin/promos/' + encodeURIComponent(p.id), { paused: !p.paused }), p.paused ? t('adm.promo.resumed') : t('adm.promo.pausedOk')) }, p.paused ? t('adm.promo.resume') : t('adm.promo.pause')),
+          h('button', { class: 'btn sm outline-danger', type: 'button', 'data-delete': p.code, 'aria-label': t('adm.delete'), title: t('adm.delete'), onclick: () => { if (confirm(t('adm.promo.confirmDelete', { code: p.code }))) promoOp(() => adm('DELETE', '/admin/promos/' + encodeURIComponent(p.id)), t('adm.promo.deleted')); } }, '×'))));
+      return h('div', { class: 'adm' },
+        head(t('adm.promo.title'), t('adm.promo.sub'), h('button', { class: 'btn primary', type: 'button', id: 'promo-new', onclick: () => openForm(null) }, '+ ' + t('adm.promo.new'))),
+        h('section', { class: 'panel wide promo-help', id: 'promo-help' }, h('h2', { class: 'ptitle' }, t('adm.promo.help.title')), h('p', {}, t('adm.promo.help'))),
+        M.promoMeta.mode === 'test' ? h('div', { class: 'warn', id: 'promo-test-notice', role: 'status' }, t('adm.promo.testMode')) : null,
+        list == null ? h('div', { class: 'empty' }, t('adm.loading')) : rows.length ? h('div', { class: 'plist' }, rows) : h('div', { class: 'empty' }, t('adm.promo.none')));
+    }
+
     // ---------- statistiques ----------
     async function resetStats() {
       if (!M.resetArmed) { M.resetArmed = true; keepScroll(render); return; } // deuxième clic = confirmation
@@ -806,7 +906,7 @@
 
     function view() {
       if (M.tab === 'games') return gamesView();
-      return M.tab === 'users' ? usersView() : M.tab === 'stats' ? statsView() : M.tab === 'payments' ? paymentsView() : logView();
+      return M.tab === 'users' ? usersView() : M.tab === 'promos' ? promosView() : M.tab === 'stats' ? statsView() : M.tab === 'payments' ? paymentsView() : logView();
     }
     // Entrée directe (aperçu navigateur : ?view=admin&adm=users&edit=slug)
     async function boot(tab, slug) {

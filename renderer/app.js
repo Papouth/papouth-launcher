@@ -319,7 +319,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       best ? h('span', { class: 'badge best' }, t('store.best')) : null,
       h('div', { class: 'name' }, name), h('div', { class: 'price' }, price, h('small', {}, unit)),
       h('div', { class: 'note' }, note),
-      h('button', { class: 'btn primary', disabled: passActive() && !(S.ent.pass.cancelAtPeriodEnd && S.ent.pass.provider === 'paypal'), onclick: () => payModal({ product: id, title: t('pay.passTitle', { plan: name }), price: price + unit }) }, (passActive() && !(S.ent.pass.cancelAtPeriodEnd && S.ent.pass.provider === 'paypal')) ? t('store.already') : t('store.choose', { plan: name.toLocaleLowerCase(window.I18N.lang()) })));
+      h('button', { class: 'btn primary', disabled: passActive() && !(S.ent.pass.cancelAtPeriodEnd && S.ent.pass.provider === 'paypal'), onclick: () => payModal({ product: id, title: t('pay.passTitle', { plan: name }), price: price + unit, unit }) }, (passActive() && !(S.ent.pass.cancelAtPeriodEnd && S.ent.pass.provider === 'paypal')) ? t('store.already') : t('store.choose', { plan: name.toLocaleLowerCase(window.I18N.lang()) })));
     return h('div', {},
       featuredBanner(),
       h('section', { class: 'hero' },
@@ -563,19 +563,56 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
 
   // ---------- paiement ----------
   function closeModal() { document.getElementById('modal')?.remove(); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } }
-  function payModal({ product, slug, title, price }) {
+  function payModal({ product, slug, title, price, unit = '' }) {
     closeModal();
+    const P = { open: false, code: '', applied: null, error: '', busy: false }; // code promo (prix recalculé par le serveur)
     const box = h('div', { class: 'modal' });
     const ov = h('div', { class: 'overlay', id: 'modal', onclick: (e) => { if (e.target === ov) closeModal(); } }, box);
     document.body.append(ov);
+    async function applyPromo() {
+      const code = P.code.trim().toUpperCase();
+      if (!code) return;
+      P.busy = true; P.error = ''; choose();
+      try { P.applied = unwrap(await A.promoCheck(code, product, slug)); P.code = code; }
+      catch (e) { P.applied = null; P.error = errText(e); }
+      P.busy = false; choose();
+      const inp = box.querySelector('#promo-input'); if (inp) inp.focus();
+    }
+    const promoBlock = () => {
+      if (P.applied) {
+        const a = P.applied;
+        return h('div', { class: 'promo-ok', id: 'promo-ok' },
+          h('span', { class: 'promo-tag' }, a.code + ' · ' + a.label),
+          h('button', { class: 'linkbtn', type: 'button', id: 'promo-remove', onclick: () => { P.applied = null; P.code = ''; P.error = ''; choose(); } }, t('pay.promo.remove')));
+      }
+      if (!P.open) return h('button', { class: 'linkbtn promo-link', type: 'button', id: 'promo-open', onclick: () => { P.open = true; choose(); const i = box.querySelector('#promo-input'); if (i) i.focus(); } }, t('pay.promo.have'));
+      return h('form', { class: 'promo-form', id: 'promo-form', onsubmit: (ev) => { ev.preventDefault(); applyPromo(); } },
+        h('input', { type: 'text', id: 'promo-input', class: 'promo-input', maxlength: 30, autocomplete: 'off', spellcheck: 'false', 'aria-label': t('pay.promo.label'), placeholder: t('pay.promo.label'), value: P.code, disabled: P.busy, oninput: (ev) => { P.code = ev.target.value.toUpperCase(); ev.target.value = P.code; } }),
+        h('button', { class: 'btn sm', type: 'submit', id: 'promo-apply', disabled: P.busy }, t('pay.promo.apply')),
+        P.error ? h('div', { class: 'promo-err', id: 'promo-err', role: 'alert' }, P.error) : null);
+    };
+    const priceLine = () => {
+      const a = P.applied;
+      if (!a) return h('div', { class: 'sub pay-price' }, price + ' · ' + t('pay.choose'));
+      const isPass = product !== 'game';
+      return h('div', { class: 'sub pay-price' },
+        h('s', { class: 'promo-old' }, money(a.originalPrice) + (isPass ? unit : '')), ' ', h('b', { class: 'promo-new' }, money(a.finalPrice) + (isPass ? unit : '')),
+        a.firstPaymentOnly && a.regularPrice != null ? h('div', { class: 'promo-then' }, t('pay.promo.then', { price: money(a.regularPrice) + unit })) : null,
+        a.free ? null : h('div', {}, t('pay.choose')));
+    };
     const choose = () => box.replaceChildren(
-      h('h3', {}, title), h('div', { class: 'sub', style: 'margin:0' }, price + ' · ' + t('pay.choose')),
-      h('button', { class: 'pay', onclick: () => go('stripe') }, t('pay.card'), h('span', {}, '→')),
-      h('button', { class: 'pay', onclick: () => go('paypal') }, 'PayPal', h('span', {}, '→')),
+      h('h3', {}, title), priceLine(), promoBlock(),
+      ...(P.applied && P.applied.free && product === 'game'
+        ? [h('button', { class: 'btn primary', type: 'button', id: 'promo-claim', onclick: () => go('stripe') }, t('pay.promo.claim'))]
+        : [h('button', { class: 'pay', onclick: () => go('stripe') }, t('pay.card'), h('span', {}, '→')),
+          h('button', { class: 'pay', onclick: () => go('paypal') }, 'PayPal', h('span', {}, '→'))]),
       h('button', { class: 'btn ghost', onclick: closeModal }, t('pay.cancel')));
     async function go(provider) {
       box.replaceChildren(h('h3', {}, title), h('div', { class: 'wait' }, h('div', { class: 'spin' }), t('pay.opening')));
-      try { await call(A.checkout(provider, product, slug, window.I18N.lang())); } catch (e) { toast(errText(e), 'error'); return choose(); }
+      try {
+        const r = unwrap(await A.checkout(provider, product, slug, window.I18N.lang(), P.applied ? P.applied.code : undefined));
+        if (r && r.granted) { closeModal(); toast(t('pay.promo.granted')); await refreshAll(); return; } // jeu offert : aucun paiement
+      } catch (e) { toast(errText(e), 'error'); if (/^promo_/.test(String(e && e.code))) { P.applied = null; P.error = errText(e); } return choose(); }
       box.replaceChildren(h('h3', {}, title),
         h('div', { class: 'wait' }, h('div', { class: 'spin' }), t('pay.waiting')),
         h('div', { class: 'sub', style: 'margin:0' }, t('pay.finish')),

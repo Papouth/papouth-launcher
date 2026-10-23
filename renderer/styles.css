@@ -375,3 +375,27 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow-wrap:an
 .cathead h2{margin:0}
 .filters{flex-wrap:wrap}
 .filters button{padding:5px 14px;font-size:13px}
+
+/* ---- codes promo ---- */
+.promo-link{margin:2px 0}
+.promo-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.promo-input{flex:1 1 140px;min-width:0;padding:8px 10px;border:var(--bd);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.promo-err{flex:1 1 100%;color:var(--err);font-size:13px;font-weight:700}
+.promo-ok{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
+.promo-tag{font-weight:800;overflow-wrap:anywhere}
+.promo-old{opacity:.6}
+.promo-new{font-size:18px}
+.promo-then{font-size:12px;font-weight:400}
+.promo-help p{margin:0;line-height:1.5}
+.promo-help .ptitle{margin:0 0 6px;font-size:15px}
+.plist{display:flex;flex-direction:column;gap:12px}
+.prow{display:grid;grid-template-columns:minmax(0,1fr);gap:10px 18px;align-items:start;background:var(--surface);border:var(--bd);border-radius:var(--r);padding:12px 16px}
+.pinfo,.pmeta,.pnum>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pmeta{flex-direction:row;flex-wrap:wrap;align-items:center}
+.pcode{font-size:16px;letter-spacing:.5px;overflow-wrap:anywhere}
+.pnum{display:flex;gap:20px;flex-wrap:wrap}
+.pact{display:flex;gap:6px;flex-wrap:wrap}
+.checks{display:flex;flex-wrap:wrap;gap:6px 18px}
+.checks.games{padding-left:6px}
+.pfld{margin:10px 0}
+@media (min-width:900px){.prow{grid-template-columns:minmax(160px,1fr) minmax(200px,1.4fr) auto auto;align-items:center}}

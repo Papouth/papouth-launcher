@@ -105,7 +105,13 @@
       return { ok: true, data: { games } };
     }, entitlements: () => R(ent),
     library: () => R({ obtained }), libraryAdd: (slug) => { if (!obtained.includes(slug)) obtained = [...obtained, slug]; return R({ ok: true, obtained }); },
-    checkout: () => R({ url: null }), billingPortal: () => R({ url: null }),
+    checkout: () => R({ url: null }),
+    promoCheck: (code, product) => {
+      if (String(code).toUpperCase() !== 'BIENVENUE20') return Promise.resolve({ ok: false, error: { code: 'promo_unknown', message: 'Code inconnu' } });
+      const o = product === 'pass_monthly' ? 30 : product === 'pass_yearly' ? 240 : 40;
+      return R({ ok: true, code: 'BIENVENUE20', label: '-20 %', product, originalPrice: o, finalPrice: o * 0.8, free: false, firstPaymentOnly: product !== 'game', regularPrice: o });
+    },
+    billingPortal: () => R({ url: null }),
     cancelSubscription: () => { ent = { ...ent, pass: { ...ent.pass, cancelAtPeriodEnd: true } }; return R({ pass: ent.pass }); },
     resumeSubscription: () => {
       if (ent.pass.provider === 'paypal') return Promise.resolve({ ok: false, error: { code: 'resume_requires_new_subscription', message: 'PayPal' } });
