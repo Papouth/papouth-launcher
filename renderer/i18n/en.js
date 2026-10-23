@@ -274,7 +274,7 @@
   'adm.users.confirmRevoke': 'Revoke this access from the player?',
   'adm.rv.menu': 'Remove an access…', 'adm.rv.title': 'Remove an access', 'adm.rv.hint': 'Removing cuts access immediately in the player\'s launcher.', 'adm.rv.confirm': 'Confirm', 'adm.rv.close': 'Close',
   'adm.rv.origin.purchase': 'Purchase', 'adm.rv.origin.admin': 'Gifted by admin', 'adm.rv.origin.legacy': 'Linked former Firestore customer', 'adm.rv.origin.gamehub': 'Granted from GameHub',
-  'adm.rv.pass.paid': 'Paid Game Pass', 'adm.rv.pass.gift': 'Gifted Game Pass', 'adm.rv.pass.all': 'Access to all published games', 'adm.rv.pass.hint': 'Paid subscription: it is cancelled from Stripe or PayPal (not from here). Access ends at the end of the paid period.', 'adm.rv.stillPass': 'Purchase removed, but the player keeps access through their Game Pass.',
+  'adm.rv.pass.paid': 'Paid Game Pass', 'adm.rv.pass.gift': 'Gifted Game Pass', 'adm.rv.pass.all': 'Access to all published games', 'adm.rv.pass.hint': 'Refunds are made from Stripe or PayPal; a full refund also cuts access automatically.', 'adm.rv.pass.periodEnd': 'Cancel at period end', 'adm.rv.pass.now': 'Cut off now', 'adm.rv.pass.doneEnd': 'Subscription cancelled: access stays until the end of the paid period.', 'adm.rv.pass.doneNow': 'Game Pass cut off: access removed immediately.', 'adm.rv.stillPass': 'Purchase removed, but the player keeps access through their Game Pass.',
   'adm.act.gamehub.revoke': 'Removed from GameHub', 'adm.act.gamehub.revoke.warn': 'GameHub removal: access kept via Game Pass', 'adm.act.gamehub.grant': 'Granted from GameHub',
   'adm.users.role': 'Role',
   'adm.role.player': 'Player',

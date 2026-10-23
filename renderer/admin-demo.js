@@ -206,9 +206,10 @@
           const x = users.find((y) => y.id === b.userId);
           if (!x) throw err('user_not_found', 'Utilisateur introuvable.');
           if (b.slug === 'pass') {
-            if (x.pass.provider && x.pass.provider !== 'admin') throw err('paid_subscription', 'Ce Game Pass est un abonnement payant : résiliez-le depuis Stripe ou PayPal.');
-            x.pass = { active: false, plan: null, provider: null, renewsAt: null, cancelAtPeriodEnd: false };
-            audit('revoke.pass', x.email);
+            const paid = x.pass.provider && x.pass.provider !== 'admin';
+            if (paid && b.mode !== 'period_end' && b.mode !== 'now') throw err('paid_subscription', 'Ce Game Pass est un abonnement payant : choisissez « fin de période » ou « maintenant » (mode), ou résiliez-le depuis Stripe ou PayPal.');
+            if (paid && b.mode === 'period_end') { x.pass.cancelAtPeriodEnd = true; audit('revoke.pass.paid.period_end', x.email, x.pass.provider); }
+            else { x.pass = { active: false, plan: null, provider: null, renewsAt: null, cancelAtPeriodEnd: false }; audit(paid ? 'revoke.pass.paid.now' : 'revoke.pass', x.email, paid ? b.provider : undefined); }
           } else {
             if (!x.owned.includes(b.slug)) {
               if (x.pass.active) throw err('access_from_pass', 'Ce joueur accède à ce jeu via son Game Pass, pas via un achat : retirez ou résiliez son Game Pass (Stripe / PayPal s\'il est payant) pour couper l\'accès.');

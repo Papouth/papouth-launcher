@@ -274,7 +274,7 @@
   'adm.users.confirmRevoke': 'Retirer cet accès au joueur ?',
   'adm.rv.menu': 'Retirer un accès…', 'adm.rv.title': 'Retirer un accès', 'adm.rv.hint': 'Le retrait coupe l\'accès tout de suite dans le launcher du joueur.', 'adm.rv.confirm': 'Confirmer', 'adm.rv.close': 'Fermer',
   'adm.rv.origin.purchase': 'Achat', 'adm.rv.origin.admin': 'Offert par l\'admin', 'adm.rv.origin.legacy': 'Ancien client Firestore rattaché', 'adm.rv.origin.gamehub': 'Accordé depuis GameHub',
-  'adm.rv.pass.paid': 'Game Pass payant', 'adm.rv.pass.gift': 'Game Pass offert', 'adm.rv.pass.all': 'Accès à tous les jeux publiés', 'adm.rv.pass.hint': 'Abonnement payant : il se résilie depuis Stripe ou PayPal (pas d\'ici). L\'accès s\'arrête à la fin de la période payée.', 'adm.rv.stillPass': 'Achat retiré, mais le joueur garde l\'accès via son Game Pass.',
+  'adm.rv.pass.paid': 'Game Pass payant', 'adm.rv.pass.gift': 'Game Pass offert', 'adm.rv.pass.all': 'Accès à tous les jeux publiés', 'adm.rv.pass.hint': 'Le remboursement se fait depuis Stripe ou PayPal ; un remboursement complet coupe aussi l\'accès automatiquement.', 'adm.rv.pass.periodEnd': 'Résilier à la fin de la période', 'adm.rv.pass.now': 'Couper maintenant', 'adm.rv.pass.doneEnd': 'Abonnement résilié : l\'accès reste jusqu\'à la fin de la période payée.', 'adm.rv.pass.doneNow': 'Game Pass coupé : accès retiré immédiatement.', 'adm.rv.stillPass': 'Achat retiré, mais le joueur garde l\'accès via son Game Pass.',
   'adm.act.gamehub.revoke': 'Retiré depuis GameHub', 'adm.act.gamehub.revoke.warn': 'Retrait GameHub : accès conservé via Game Pass', 'adm.act.gamehub.grant': 'Accordé depuis GameHub',
   'adm.users.role': 'Rôle',
   'adm.role.player': 'Joueur',

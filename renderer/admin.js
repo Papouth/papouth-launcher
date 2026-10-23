@@ -662,7 +662,7 @@
         [h('button', { class: 'btn primary', type: 'button', onclick: () => act(() => adm('POST', '/admin/grant', { userId: u.id, slug: 'pass', days: Number(days.value) || 30 }), t('adm.users.granted')) }, t('adm.users.givePass')), h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, t('adm.cancel'))]);
     }
     // « Retirer un accès… » : liste les accès ACTUELS du joueur avec leur origine, un bouton « Retirer » par ligne (confirmation en deux clics, sans boîte de dialogue système).
-    // Le Game Pass payant n'est pas retirable ici (résiliation via Stripe / PayPal). Après chaque retrait la liste est rechargée depuis le serveur.
+    // Game Pass payant : « fin de période » (1 clic) ou « maintenant » (2 clics) ; aucun remboursement automatique (à faire dans Stripe / PayPal). Après chaque retrait la liste est rechargée depuis le serveur.
     async function revokeModal(u) {
       await ensureGames();
       let cur = u, armed = null; // armed : ligne en attente de confirmation
@@ -673,7 +673,7 @@
         if (x.pass && x.pass.active) {
           const gift = x.pass.provider === 'admin';
           out.push({ key: 'pass', slug: 'pass', name: t('adm.users.pass'), origin: gift ? t('adm.rv.pass.gift') : t('adm.rv.pass.paid') + (x.pass.provider ? ' · ' + (x.pass.provider === 'paypal' ? 'PayPal' : 'Stripe') : ''),
-            note: gift ? t('adm.rv.pass.all') : t('adm.rv.pass.hint'), can: gift });
+            note: gift ? t('adm.rv.pass.all') : t('adm.rv.pass.hint'), can: gift, paid: !gift });
         }
         return out;
       };
@@ -684,11 +684,11 @@
         const f = (M.users || []).find((y) => y.id === u.id);
         if (f) cur = f; // le joueur reste affiché même si la recherche ne le renvoie plus
       }
-      async function remove(l) {
+      async function remove(l, mode) {
         err.textContent = '';
         try {
-          const r = await adm('POST', '/admin/revoke', { userId: u.id, slug: l.slug });
-          toast(r && r.stillViaPass ? t('adm.rv.stillPass') : t('adm.users.revoked'), r && r.stillViaPass ? 'error' : undefined);
+          const r = await adm('POST', '/admin/revoke', { userId: u.id, slug: l.slug, ...(mode ? { mode } : {}) });
+          toast(mode ? t(mode === 'now' ? 'adm.rv.pass.doneNow' : 'adm.rv.pass.doneEnd') : r && r.stillViaPass ? t('adm.rv.stillPass') : t('adm.users.revoked'), !mode && r && r.stillViaPass ? 'error' : undefined);
           armed = null; await reload(); draw();
         } catch (e) { armed = null; err.textContent = errText(e); toast(errText(e), 'error'); draw(); }
       }
@@ -697,7 +697,10 @@
         body.replaceChildren(h('small', {}, '@' + cur.tiktok), h('div', { class: 'sub' }, t('adm.rv.hint')),
           ls.length ? h('div', { class: 'accs' }, ls.map((l) => h('div', { class: 'accrow', 'data-acc': l.slug },
             h('div', { class: 'accinfo' }, h('b', {}, l.name), h('small', {}, l.origin), l.note ? h('small', { class: 'accnote' }, l.note) : null),
-            l.can ? (armed === l.key
+            l.paid ? (armed === 'pass:now'
+              ? h('div', { class: 'row' }, h('button', { class: 'btn sm danger', type: 'button', 'data-confirm': 'pass-now', onclick: () => remove(l, 'now') }, t('adm.rv.confirm')), h('button', { class: 'btn sm ghost', type: 'button', onclick: () => { armed = null; draw(); } }, t('adm.cancel')))
+              : h('div', { class: 'row' }, h('button', { class: 'btn sm outline-danger', type: 'button', 'data-revoke': 'pass-period-end', onclick: () => remove(l, 'period_end') }, t('adm.rv.pass.periodEnd')), h('button', { class: 'btn sm danger', type: 'button', 'data-revoke': 'pass-now', onclick: () => { armed = 'pass:now'; err.textContent = ''; draw(); } }, t('adm.rv.pass.now'))))
+            : l.can ? (armed === l.key
               ? h('div', { class: 'row' }, h('button', { class: 'btn sm danger', type: 'button', 'data-confirm': l.slug, onclick: () => remove(l) }, t('adm.rv.confirm')), h('button', { class: 'btn sm ghost', type: 'button', onclick: () => { armed = null; draw(); } }, t('adm.cancel')))
               : h('button', { class: 'btn sm outline-danger', type: 'button', 'data-revoke': l.slug, onclick: () => { armed = l.key; err.textContent = ''; draw(); } }, t('adm.users.revoke'))) : null)))
             : h('div', { class: 'empty' }, t('adm.users.nothing')), err);

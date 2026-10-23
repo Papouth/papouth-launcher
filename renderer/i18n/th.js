@@ -274,7 +274,7 @@
   'adm.users.confirmRevoke': 'เพิกถอนสิทธิ์นี้ของผู้เล่นหรือไม่?',
   'adm.rv.menu': 'เพิกถอนสิทธิ์…', 'adm.rv.title': 'เพิกถอนสิทธิ์', 'adm.rv.hint': 'การเพิกถอนจะตัดสิทธิ์ในตัวเปิดเกมของผู้เล่นทันที', 'adm.rv.confirm': 'ยืนยัน', 'adm.rv.close': 'ปิด',
   'adm.rv.origin.purchase': 'ซื้อ', 'adm.rv.origin.admin': 'แอดมินมอบให้', 'adm.rv.origin.legacy': 'ลูกค้า Firestore เดิมที่เชื่อมโยงแล้ว', 'adm.rv.origin.gamehub': 'ให้สิทธิ์จาก GameHub',
-  'adm.rv.pass.paid': 'Game Pass แบบชำระเงิน', 'adm.rv.pass.gift': 'Game Pass ที่ได้รับฟรี', 'adm.rv.pass.all': 'เข้าถึงเกมที่เผยแพร่ทั้งหมด', 'adm.rv.pass.hint': 'การสมัครแบบชำระเงิน: ยกเลิกได้ที่ Stripe หรือ PayPal (ไม่ใช่ที่นี่) สิทธิ์จะสิ้นสุดเมื่อครบรอบที่ชำระแล้ว', 'adm.rv.stillPass': 'ลบการซื้อแล้ว แต่ผู้เล่นยังเข้าถึงได้ผ่าน Game Pass',
+  'adm.rv.pass.paid': 'Game Pass แบบชำระเงิน', 'adm.rv.pass.gift': 'Game Pass ที่ได้รับฟรี', 'adm.rv.pass.all': 'เข้าถึงเกมที่เผยแพร่ทั้งหมด', 'adm.rv.pass.hint': 'การคืนเงินทำที่ Stripe หรือ PayPal การคืนเงินเต็มจำนวนจะตัดสิทธิ์โดยอัตโนมัติด้วย', 'adm.rv.pass.periodEnd': 'ยกเลิกเมื่อสิ้นรอบ', 'adm.rv.pass.now': 'ตัดสิทธิ์ทันที', 'adm.rv.pass.doneEnd': 'ยกเลิกการสมัครแล้ว: สิทธิ์ยังใช้ได้จนสิ้นรอบที่ชำระแล้ว', 'adm.rv.pass.doneNow': 'ตัด Game Pass แล้ว: สิทธิ์ถูกเพิกถอนทันที', 'adm.rv.stillPass': 'ลบการซื้อแล้ว แต่ผู้เล่นยังเข้าถึงได้ผ่าน Game Pass',
   'adm.act.gamehub.revoke': 'เพิกถอนจาก GameHub', 'adm.act.gamehub.revoke.warn': 'เพิกถอนจาก GameHub: ยังเข้าถึงได้ผ่าน Game Pass', 'adm.act.gamehub.grant': 'ให้สิทธิ์จาก GameHub',
   'adm.users.role': 'บทบาท',
   'adm.role.player': 'ผู้เล่น',
