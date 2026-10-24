@@ -181,7 +181,7 @@ function fileInfo(p) {
   } catch (_) { return null; }
 }
 function demoAdmin() {
-  if (!demoAdminCore) demoAdminCore = require('./renderer/admin-demo').create({ gamesFor: demo.gamesFor, langs: ['fr', 'en', 'es', 'th', 'ms'] });
+  if (!demoAdminCore) demoAdminCore = require('./renderer/admin-demo').create({ gamesFor: demo.gamesFor, langs: ['fr', 'en', 'es', 'th', 'ms', 'de'] });
   return demoAdminCore;
 }
 // Les URLs relatives renvoyées par /admin/* (couverture, médias) deviennent absolues comme pour le catalogue public.

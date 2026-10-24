@@ -146,7 +146,7 @@
           const g = {
             slug, name, kind: 'game', free: false, accent: '#8a8f98', priceCents: 4000, version: '1.0.0', sizeMb: 0, status: 'draft', sortOrder: games.length,
             i18n: Object.fromEntries(langs.map((l) => [l, { tagline: '', description: '', features: [], howItWorks: [] }])),
-            languages: ['Français', 'English', 'Español', 'ไทย', 'Bahasa Melayu'], requirements: { os: 'Windows 10/11', needs: {} }, coverUrl: '', coverPath: '', media: [],
+            languages: ['Français', 'English', 'Español', 'ไทย', 'Bahasa Melayu', 'Deutsch'], requirements: { os: 'Windows 10/11', needs: {} }, coverUrl: '', coverPath: '', media: [],
             download: { mode: 'upload', exe: name.replace(/[^A-Za-z0-9]/g, '') + '.exe', hasBuild: false }, stripeProductId: null, stripePriceId: null, createdAt: now(), updatedAt: now()
           };
           patch(g, { ...(b.kind !== undefined ? { kind: b.kind } : {}), ...(b.free !== undefined ? { free: b.free } : {}), ...(b.free ? { priceCents: 0 } : {}) });

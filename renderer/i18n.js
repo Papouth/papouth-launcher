@@ -8,13 +8,14 @@
     { code: 'en', name: 'English', locale: 'en-GB' },
     { code: 'es', name: 'Español', locale: 'es-ES' },
     { code: 'th', name: 'ไทย', locale: 'th-TH' },
-    { code: 'ms', name: 'Bahasa Melayu', locale: 'ms-MY' }
+    { code: 'ms', name: 'Bahasa Melayu', locale: 'ms-MY' },
+    { code: 'de', name: 'Deutsch', locale: 'de-DE' }
   ];
   const codes = LANGS.map((l) => l.code);
-  // fr->fr, es->es, th->th, ms/id->ms, sinon en
+  // fr->fr, es->es, th->th, de (de-AT, de-CH...)->de, ms/id->ms, sinon en
   function fromOs(tag) {
     const c = String(tag || '').toLowerCase().split(/[-_]/)[0];
-    if (c === 'fr' || c === 'es' || c === 'th') return c;
+    if (c === 'fr' || c === 'es' || c === 'th' || c === 'de') return c;
     if (c === 'ms' || c === 'id') return 'ms';
     return 'en';
   }

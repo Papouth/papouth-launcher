@@ -399,3 +399,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow-wrap:an
 .checks.games{padding-left:6px}
 .pfld{margin:10px 0}
 @media (min-width:900px){.prow{grid-template-columns:minmax(160px,1fr) minmax(200px,1.4fr) auto auto;align-items:center}}
+
+/* Allemand : mots composés longs, retour à la ligne plutôt que débordement */
+html[lang="de"] body{overflow-wrap:break-word;hyphens:auto}
+html[lang="de"] .btn,html[lang="de"] .pay,html[lang="de"] .tabs button,html[lang="de"] .nav button{hyphens:manual}

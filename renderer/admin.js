@@ -3,8 +3,8 @@
 // Chargé avant app.js ; app.js appelle PapouthAdmin.create(ctx) uniquement si le compte a le rôle « admin ».
 // Aucun style inline (CSP stricte) : classes CSS + CSSOM via h({style}).
 (function () {
-  const LANGS = ['fr', 'en', 'es', 'th', 'ms'];
-  const LANG_NAMES = { fr: 'FR', en: 'EN', es: 'ES', th: 'TH', ms: 'MS' };
+  const LANGS = ['fr', 'en', 'es', 'th', 'ms', 'de'];
+  const LANG_NAMES = { fr: 'FR', en: 'EN', es: 'ES', th: 'TH', ms: 'MS', de: 'DE' };
   const PRESETS = ['#ff4d8d', '#ffb020', '#4da3ff'];
   const MEDIA_MAX = { image: 15 * 1048576, video: 300 * 1048576 };
 

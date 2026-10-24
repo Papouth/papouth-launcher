@@ -35,7 +35,7 @@
     return BASE.map((g) => ({
       kind: 'game', free: false, inPass: !g.free, ...g, tagline: pick(g.tagline, lang), description: pick(g.description, lang), image: '', media: [],
       requirements: { os: 'Windows 10/11', needs: pick(EXTRA.needs, lang) },
-      languages: ['Français', 'English', 'Español', 'ไทย', 'Bahasa Melayu'],
+      languages: ['Français', 'English', 'Español', 'ไทย', 'Bahasa Melayu', 'Deutsch'],
       features: EXTRA.features.map((x) => pick(x, lang)), howItWorks: EXTRA.howItWorks.map((x) => pick(x, lang))
     }));
   }
@@ -66,7 +66,7 @@
   // Faux backend admin en mémoire (admin-demo.js) ; les fichiers « envoyés » deviennent des object URLs.
   const withMedia = (gs) => gs.map((g) => { const list = DEMO_MEDIA[g.slug] || []; return { ...g, media: list.map((x) => ({ ...x, url: 'demo-media/' + g.slug + '/' + x.url, ...(x.thumb ? { thumb: 'demo-media/' + g.slug + '/' + x.thumb } : {}) })), image: list.length ? 'demo-media/' + g.slug + '/00-cover.jpg' : '' }; });
   let demoAdmin = null;
-  const da = () => demoAdmin || (demoAdmin = window.PapouthAdminDemo.create({ gamesFor: (l) => withMedia(gamesFor(l)), langs: ['fr', 'en', 'es', 'th', 'ms'] }));
+  const da = () => demoAdmin || (demoAdmin = window.PapouthAdminDemo.create({ gamesFor: (l) => withMedia(gamesFor(l)), langs: ['fr', 'en', 'es', 'th', 'ms', 'de'] }));
   const wrapE = (fn) => { try { return R(fn()); } catch (e) { return Promise.resolve({ ok: false, error: { code: e.code || 'error', message: e.message } }); } };
   const files = new Map(); let fseq = 0;
   const infoOf = (p) => { const f = files.get(p); if (!f) return null; const ext = (f.name.split('.').pop() || '').toLowerCase(); const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', mp4: 'video/mp4', zip: 'application/zip', exe: 'application/octet-stream' }[ext] || ''; return { path: p, name: f.name, size: f.size, mime, kind: mime.startsWith('video/') ? 'video' : mime.startsWith('image/') ? 'image' : ext === 'zip' ? 'zip' : ext === 'exe' ? 'exe' : ext === 'json' ? 'json' : 'other' }; };
