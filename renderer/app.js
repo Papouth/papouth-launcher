@@ -421,7 +421,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     return h('div', { class: 'store' },
       h('header', { class: 'storehead' },
         h('h1', {}, t('store.hookTitle')), h('p', { class: 'sub' }, t('store.hookSub')),
-        h('ul', { class: 'benefits' }, ['store.benefit1', 'store.benefit2', 'store.benefit3'].map((k) => h('li', {}, t(k))))),
+        h('ul', { class: 'benefits' }, ['store.benefit1', 'store.benefit2', 'store.benefit3'].map((k) => h('li', {}, h('span', { class: 'tick', 'aria-hidden': 'true' }, svg('M5 12.5l4.5 4.5L19 7.5')), t(k))))),
       offerStrip(),
       featuredBanner(),
       passCard(),
