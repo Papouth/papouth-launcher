@@ -524,9 +524,9 @@
   'tab.mine': 'Ma bibliothèque',
   'tag.owned': 'Possédé',
   'tag.inPass': 'Inclus dans le Game Pass',
-  'buy.game': 'Acheter {price} — à vie',
+  'buy.game': 'Acheter — {price} à vie',
   'buy.pass': 'Prendre le Game Pass',
-  'buy.orPass': 'ou inclus dans le Game Pass',
+  'buy.orPass': 'ou {price}/mois pour tous les jeux, sans engagement',
   'buy.safe': 'Paiement sécurisé Stripe ou PayPal',
   'buy.instant': 'Accès immédiat',
   'buy.updates': 'Mises à jour incluses',
@@ -558,6 +558,11 @@
   'ach.next': 'Prochaine étape : {name} — {desc}',
   'ach.allDone': 'Prise en main terminée.',
   'ach.note': 'Progression enregistrée sur cet ordinateur uniquement.',
-  'pass.trial': '{price} = tous les jeux à tester pendant un mois, sans engagement',
-  'act.install': 'Installer'
+  'pass.trial': '{price} pour tous les jeux pendant un mois, sans engagement',
+  'act.install': 'Installer',
+  'pass.cta': 'Prendre le Game Pass — {price}',
+  'pass.subMonthly': '{price}/mois, sans engagement',
+  'pass.subYearly': '{price}/an, {months} mois offerts',
+  'toast.readyShortcut': '{name} est prêt. Raccourci créé sur le Bureau.',
+  'card.shortcut': 'Installé · raccourci sur le Bureau'
 };

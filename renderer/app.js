@@ -18,7 +18,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     dev: false, devOpen: false, boot: false, user: null, demo: false, demoAvailable: false, reachable: true, apiUrl: '',
     tab: new URLSearchParams(location.search).get('view') || 'store', sale: null, mi: 0,
     games: [], ent: { pass: { active: false }, owned: [], access: [] }, obtained: [], filter: 'games', offer: null, prog: null,
-    installed: {}, running: new Set(), progress: {}, busy: new Set(), update: null, version: ''
+    installed: {}, planSel: 'pass_monthly', running: new Set(), progress: {}, busy: new Set(), update: null, version: ''
   };
   if (S.tab === 'game') { S.sale = new URLSearchParams(location.search).get('slug'); S.tab = 'store'; }
   if (!['store', 'library', 'account', 'admin'].includes(S.tab)) S.tab = 'store';
@@ -232,6 +232,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       h('div', { class: 'body' },
         h('div', { class: 'nm' }, g.name), h('div', { class: 'tg' }, g.tagline),
         h('div', { class: 'meta' }, 'v' + g.version + (g.sizeMb ? ' · ' + t('card.size', { size: window.I18N.num(g.sizeMb) }) : '') + (inst ? ' · ' + t('card.installed', { version: inst.version }) : '')),
+        inst && isSoftware(g) && getProg().shortcut.includes(g.slug) ? h('div', { class: 'meta ok-short' }, t('card.shortcut')) : null,
         actions));
   }
   // ----- Progression des téléchargements (mise à jour ciblée du DOM, sans re-rendu complet) -----
@@ -278,8 +279,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     } else if (state === 'locked') {
       actions.append(
         h('button', { class: 'btn primary', 'data-buy': g.slug, onclick: () => payModal({ product: 'game', slug: g.slug, title: g.name, price: money(g.price || 40) }) }, t('buy.game', { price: money(g.price || 40) })),
-        h('button', { class: 'link', onclick: () => { toPass(); } }, t('buy.orPass')),
-        ...(trial ? [h('div', { class: 'trial', id: 'pass-trial-hint' }, t('pass.trial', { price: money(PASS_MONTH) }))] : []));
+        h('button', { class: 'link', 'data-pass-link': '1', onclick: () => { toPass(); } }, t('buy.orPass', { price: money(PASS_MONTH) })));
     } else if (state === 'install' && g.available === false) actions.append(h('button', { class: 'btn', disabled: true }, t('act.soon')));
     else if (state === 'install' && isFree(g) && !S.obtained.includes(g.slug)) actions.append(h('button', { class: 'btn primary free', 'data-obtain': g.slug, onclick: () => obtain(g) }, t('act.install')));
     else if (state === 'install') actions.append(h('button', { class: 'btn primary' + (isFree(g) ? ' free' : ''), onclick: () => install(g) }, isFree(g) ? t('act.install') : t('act.download')));
@@ -324,7 +324,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     const meta = isFree(g)
       ? h('div', { class: 'price-big' }, t('price.free'), h('small', {}, t('sale.freeNote')))
       : state === 'locked'
-        ? h('div', { class: 'price-big' }, money(g.price || 40), h('small', {}, t('sale.once')))
+        ? null
         : h('div', { class: 'spot-state' }, h('span', { class: 'badge' }, tagOf(g)));
     const actions = actionsFor(g, 'store', true);
     actions.append(h('button', { class: 'btn ghost sm spot-view', type: 'button', onclick: () => openSale(g.slug) }, t('feat.view')));
@@ -379,12 +379,21 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
 
   // ----- Boutique -----
   const PASS_MONTH = 30, PASS_YEAR = 240;
+  // Sélecteur segmenté Mensuel / Annuel (carte Game Pass et fenêtre d'achat)
+  function planSeg(cur, onPick, months) {
+    const opt = (id, label, sub) => h('button', { type: 'button', class: cur === id ? 'on' : '', 'data-plan': id, 'aria-pressed': String(cur === id), onclick: () => onPick(id) }, h('b', {}, label), h('small', {}, sub));
+    return h('div', { class: 'planseg', id: 'plan-seg', role: 'group', 'aria-label': t('store.passTitle') },
+      opt('pass_monthly', t('plan.monthly'), t('pass.subMonthly', { price: money(PASS_MONTH) })),
+      opt('pass_yearly', t('plan.yearly'), t('pass.subYearly', { price: money(PASS_YEAR), months })));
+  }
   function passCard() {
-    const mk = (id, name, price, unit, best) => {
-      const off = passActive() && !(S.ent.pass.cancelAtPeriodEnd && S.ent.pass.provider === 'paypal');
-      return h('button', { class: best ? 'btn primary big' : 'btn', type: 'button', id: 'buy-' + id, disabled: off, onclick: () => payModal({ product: id, title: t('pay.passTitle', { plan: name }), price: price + unit, unit }) },
-        off ? t('store.already') : best ? t('buy.pass') : t('pass.monthlyAlt', { price: price + unit }));
-    };
+    const planInfo = (id) => (id === 'pass_yearly'
+      ? { id, name: t('plan.yearly'), price: money(PASS_YEAR), unit: t('store.perYear') }
+      : { id, name: t('plan.monthly'), price: money(PASS_MONTH), unit: t('store.perMonth') });
+    const sel = planInfo(S.planSel === 'pass_yearly' ? 'pass_yearly' : 'pass_monthly');
+    const already = passActive() && !(S.ent.pass.cancelAtPeriodEnd && S.ent.pass.provider === 'paypal');
+    const buyBtn = () => h('button', { class: 'btn primary big', type: 'button', id: 'buy-pass', disabled: already, onclick: () => payModal({ product: sel.id, title: t('pay.passTitle', { plan: sel.name }), price: sel.price + sel.unit, unit: sel.unit }) },
+      already ? t('store.already') : t('pass.cta', { price: sel.price + sel.unit }));
     if (passActive() && !(S.ent.pass.cancelAtPeriodEnd)) {
       return h('section', { class: 'pass-card active', id: 'gamepass' },
         h('div', {}, h('h2', {}, t('store.passTitle')), h('p', { class: 'sub' }, t('pass.activeSub', { plan: planLabel(S.ent.pass.plan), date: fmtDate(S.ent.pass.renewsAt) }))),
@@ -403,10 +412,8 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
           saving > 0 ? h('div', { class: 'pass-save' }, t('pass.saving', { amount: money(saving) }), h('span', { class: 'pass-tag' }, t('store.passTitle'))) : null) : null,
         h('div', { class: 'pass-trial', id: 'pass-trial' }, t('pass.trial', { price: money(PASS_MONTH) }))),
       h('div', { class: 'pass-buy' },
-        h('div', { class: 'pass-price' }, money(PASS_YEAR), h('small', {}, t('store.perYear'))),
-        h('div', { class: 'note' }, t('store.yearNote', { price: money(PASS_YEAR / 12) })),
-        mk('pass_yearly', t('plan.yearly'), money(PASS_YEAR), t('store.perYear'), true),
-        mk('pass_monthly', t('plan.monthly'), money(PASS_MONTH), t('store.perMonth'), false),
+        planSeg(sel.id, (id) => { S.planSel = id; render(); }, monthsFree),
+        buyBtn(),
         reassure()));
   }
   function storeView() {
@@ -492,7 +499,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
             h('div', { class: 'row' }, h('h1', {}, g.name), h('span', { class: 'badge' }, badge), isSoftware(g) ? h('span', { class: 'badge kind-inline' }, t('tag.software')) : null),
             h('p', { class: 'sub hook' }, g.tagline),
             isFree(g) ? h('div', { class: 'price-big' }, t('price.free'), h('small', {}, t('sale.freeNote')))
-              : h('div', { class: 'price-big' }, isOwned(g) ? t('sale.owned') : money(g.price || 40), isOwned(g) ? null : h('small', {}, t('sale.once'))),
+              : isOwned(g) ? h('div', { class: 'price-big' }, t('sale.owned')) : null,
             opts.preview ? h('div', { class: 'actions' }, h('button', { class: 'btn primary', type: 'button', disabled: true }, isFree(g) ? t('act.get') : t('buy.game', { price: money(g.price || 0) }))) : actionsFor(g, 'store', true),
             state === 'locked' && !opts.preview ? reassure() : null,
             (g.features || []).length ? h('ul', { class: 'pts', id: 'sale-points', 'aria-label': t('sale.points') }, g.features.slice(0, 3).map((f) => h('li', {}, f))) : null))),
@@ -514,7 +521,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     if (S.prog) return S.prog;
     let v = null;
     try { v = JSON.parse(localStorage.getItem(progKey()) || 'null'); } catch (e) { /* ignore */ }
-    S.prog = { installed: Array.isArray(v && v.installed) ? v.installed : [], played: Array.isArray(v && v.played) ? v.played : [] };
+    S.prog = { installed: Array.isArray(v && v.installed) ? v.installed : [], played: Array.isArray(v && v.played) ? v.played : [], shortcut: Array.isArray(v && v.shortcut) ? v.shortcut : [] };
     return S.prog;
   }
   function markProg(kind, slug) {
@@ -661,7 +668,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     const g = S.games.find((x) => x.slug === d.slug) || { slug: d.slug, name: d.slug };
     try { S.installed = unwrap(await A.installed()) || {}; } catch (_) { /* inchangé */ }
     render();
-    if (d.ok) { markProg('installed', d.slug); render(); return toast(t('toast.ready', { name: g.name })); }
+    if (d.ok) { markProg('installed', d.slug); if (d.shortcut) markProg('shortcut', d.slug); render(); return toast(d.shortcut ? t('toast.readyShortcut', { name: g.name }) : t('toast.ready', { name: g.name })); }
     const e = d.error || {};
     if (e.code === 'cancelled') return toast(t('dl.cancelled', { name: g.name }));
     if (e.code === 'device_limit') return deviceModal(e.extra || {}, () => install(g));
@@ -738,8 +745,15 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         a.firstPaymentOnly && a.regularPrice != null ? h('div', { class: 'promo-then' }, t('pay.promo.then', { price: money(a.regularPrice) + unit })) : null,
         h('div', { class: 'sub' }, note));
     };
+    const isPassProduct = product !== 'game';
+    const setPlan = (id) => {
+      const yr = id === 'pass_yearly';
+      product = id; unit = yr ? t('store.perYear') : t('store.perMonth'); price = money(yr ? PASS_YEAR : PASS_MONTH) + unit;
+      title = t('pay.passTitle', { plan: yr ? t('plan.yearly') : t('plan.monthly') });
+      P.applied = null; P.code = ''; P.error = ''; choose(); autoOffer();
+    };
     const choose = () => box.replaceChildren(
-      h('h3', {}, title), priceLine(),
+      h('h3', {}, title), isPassProduct ? planSeg(product, setPlan, Math.round((PASS_MONTH * 12 - PASS_YEAR) / PASS_MONTH)) : null, priceLine(),
       ...(P.applied && P.applied.free && product === 'game'
         ? [h('button', { class: 'btn primary big', type: 'button', id: 'promo-claim', onclick: () => go('stripe') }, t('pay.promo.claim'))]
         : [h('button', { class: 'btn primary big', type: 'button', id: 'pay-card', onclick: () => go('stripe') }, t('pay.cardCta'), h('span', {}, '→')),
@@ -774,7 +788,8 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     }
     choose();
     // Offre mise en avant : appliquée d'office si elle concerne ce produit (le serveur recalcule et valide le prix)
-    if (S.offer && offerLive(S.offer) && offerApplies(S.offer, product, slug)) { P.code = String(S.offer.code).toUpperCase(); applyPromo(true); }
+    autoOffer();
+    function autoOffer() { if (S.offer && offerLive(S.offer) && offerApplies(S.offer, product, slug)) { P.code = String(S.offer.code).toUpperCase(); applyPromo(true); } }
   }
 
   // Panneau développeur (URL de l'API) : Ctrl+Shift+D, ou PAPOUTH_DEV=1

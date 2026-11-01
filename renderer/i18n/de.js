@@ -524,9 +524,9 @@
   'tab.mine': 'My library',
   'tag.owned': 'Owned',
   'tag.inPass': 'Included in the Game Pass',
-  'buy.game': 'Buy {price} — lifetime',
+  'buy.game': 'Buy — {price} lifetime',
   'buy.pass': 'Get the Game Pass',
-  'buy.orPass': 'or included in the Game Pass',
+  'buy.orPass': 'or {price}/month for every game, no commitment',
   'buy.safe': 'Secure payment with Stripe or PayPal',
   'buy.instant': 'Instant access',
   'buy.updates': 'Updates included',
@@ -559,6 +559,12 @@
   'ach.allDone': 'Getting started complete.',
   'ach.note': 'Progress is saved on this computer only.',
   // TODO traduire après validation (anglais provisoire)
-  'pass.trial': '{price} = every game to try for a month, no commitment',
-  'act.install': 'Install'
+  'pass.trial': '{price} for every game for a month, no commitment',
+  'act.install': 'Install',
+  // TODO traduire après validation (anglais provisoire)
+  'pass.cta': 'Get the Game Pass — {price}',
+  'pass.subMonthly': '{price}/month, no commitment',
+  'pass.subYearly': '{price}/year, {months} months free',
+  'toast.readyShortcut': '{name} is ready. Shortcut created on the Desktop.',
+  'card.shortcut': 'Installed · shortcut on the Desktop'
 };
