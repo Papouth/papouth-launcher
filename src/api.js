@@ -81,6 +81,7 @@ class StoreApi {
   login(email, password) { return this.request('POST', '/auth/login', { email, password }, { auth: false }); }
   me() { return this.request('GET', '/me'); }
   games(lang) { return this.request('GET', '/games' + (lang ? '?lang=' + encodeURIComponent(lang) : ''), undefined, { auth: false, lang }); }
+  offer() { return this.request('GET', '/offer', undefined, { auth: false }); } // offre promo mise en avant (publique) ou null
   entitlements() { return this.request('GET', '/entitlements'); }
   library() { return this.request('GET', '/library'); }
   libraryAdd(slug) { return this.request('POST', '/library/add', { slug }); }

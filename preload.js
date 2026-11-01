@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('alien', {
   logout: () => call('auth:logout'),
   startDemo: () => call('demo:start'),
   catalog: (lang) => call('store:catalog', lang),
+  offer: () => call('store:offer'),
   entitlements: () => call('store:entitlements'),
   library: () => call('store:library'),
   libraryAdd: (slug) => call('store:libraryAdd', slug),

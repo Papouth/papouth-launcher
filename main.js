@@ -261,6 +261,8 @@ function absolutize(data) {
   return data;
 }
 handle('store:catalog', async (lang) => { const r = demoMode ? { games: demo.gamesFor(lang) } : absolutize(await api.games(lang)); catalogCache = (r && r.games) || []; return r; });
+// Offre mise en avant : jamais bloquante (route absente ou serveur injoignable => aucune offre)
+handle('store:offer', async () => { if (demoMode) return null; try { const r = await api.offer(); const o = r && typeof r === 'object' && 'offer' in r ? r.offer : r; return o && o.code ? o : null; } catch (_) { return null; } });
 handle('store:entitlements', async () => (demoMode ? demo.entitlements(demoState) : api.entitlements()));
 handle('store:library', async () => (demoMode ? { obtained: demoState.obtained.slice() } : api.library()));
 handle('store:libraryAdd', async (slug) => {
