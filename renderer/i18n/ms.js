@@ -557,5 +557,8 @@
   'ach.forgeLaunch.d': 'Open the tool from the launcher',
   'ach.next': 'Next step: {name} — {desc}',
   'ach.allDone': 'Getting started complete.',
-  'ach.note': 'Progress is saved on this computer only.'
+  'ach.note': 'Progress is saved on this computer only.',
+  // TODO traduire après validation (anglais provisoire)
+  'pass.trial': '{price} = every game to try for a month, no commitment',
+  'act.install': 'Install'
 };

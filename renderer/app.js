@@ -93,6 +93,26 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   const isSoftware = (g) => g.kind === 'software';
   const isTool = (g) => isSoftware(g) || isFree(g); // « Outils gratuits » : logiciels et éléments gratuits
   const FORGE = 'overlay-forge';
+  const ACC_KEYS = { 'paintball-master': 'pink', 'pop-riot': 'yellow', 'boys-girls-ultimate': 'blue' };
+  // Image d'un élément : couverture, sinon 1re capture image, sinon vignette vidéo (jamais une initiale s'il existe une image)
+  function posterOf(g) {
+    const m = g.media || [], shot = m.find((x) => x.type === 'image'), vid = m.find((x) => x.type === 'video' && x.thumb);
+    return g.image || (shot && shot.url) || (vid && vid.thumb) || '';
+  }
+  // Couleur d'accent du jeu + couleur de texte à contraste AA dessus (--on-ac)
+  function accStyle(g) {
+    const key = ACC_KEYS[g.slug], night = document.documentElement.getAttribute('data-theme') !== 'day';
+    let hex = /^#[0-9a-f]{3,8}$/i.test(g.accent) ? g.accent : '#7A3CFF';
+    if (key) { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--' + key).trim(); if (/^#[0-9a-f]{6}$/i.test(v)) hex = v; } catch (e) { /* ignore */ } }
+    let c = hex.replace('#', ''); if (c.length === 3) c = c.split('').map((x) => x + x).join('');
+    let rgb = [0, 2, 4].map((i) => parseInt(c.slice(i, i + 2), 16) || 0);
+    if (!key && night) rgb = rgb.map((v, i) => Math.round(v * 0.82 + [0x15, 0x15, 0x1B][i] * 0.18));
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
+    const onDark = (L + 0.05) / 0.0575, onWhite = 1.05 / (L + 0.05);
+    if (isTool(g)) return '--ac-raw:#2FB67C;--ac:' + (night ? '#2FB67C' : '#1F9C68') + ';--on-ac:' + (night ? '#06150E' : '#ffffff');
+    return '--ac-raw:' + hex + ';--on-ac:' + (onDark >= onWhite ? '#151515' : '#ffffff');
+  }
   const inLibrary = (g) => hasAccess(g) && (!isFree(g) || !!S.installed[g.slug] || S.obtained.includes(g.slug));
   const passActive = () => !!(S.ent.pass && S.ent.pass.active);
   const planLabel = (p) => (p === 'yearly' ? t('plan.yearly') : p === 'monthly' ? t('plan.monthly') : '—');
@@ -201,11 +221,12 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     const state = gameState(g);
     const actions = actionsFor(g, ctx);
     const inst = S.installed[g.slug];
-    const bg = g.image ? 'url("' + g.image.replace(/["\\()]/g, '') + '")' : 'none';
-    const accKey = { 'paintball-master': 'pink', 'pop-riot': 'yellow', 'boys-girls-ultimate': 'blue' }[g.slug];
-    return h('article', { class: 'game clickable', tabindex: '0', role: 'link', 'aria-label': t('card.view', { name: g.name }), onclick: (ev) => { if (!ev.target.closest('button,a,input')) openSale(g.slug); }, onkeydown: (ev) => { if (ev.key === 'Enter' && ev.target === ev.currentTarget) openSale(g.slug); }, 'data-accent': accKey, style: '--ac-raw:' + (/^#[0-9a-f]{3,8}$/i.test(g.accent) ? g.accent : '#7A3CFF') },
+    const pic = posterOf(g);
+    const bg = pic ? 'url("' + pic.replace(/["\\()]/g, '') + '")' : 'none';
+    const accKey = ACC_KEYS[g.slug];
+    return h('article', { class: 'game clickable', tabindex: '0', role: 'link', 'aria-label': t('card.view', { name: g.name }), onclick: (ev) => { if (!ev.target.closest('button,a,input')) openSale(g.slug); }, onkeydown: (ev) => { if (ev.key === 'Enter' && ev.target === ev.currentTarget) openSale(g.slug); }, 'data-accent': accKey, style: accStyle(g), 'data-free': isFree(g) ? '1' : null },
       h('div', { class: 'cover', style: 'background-image:' + bg },
-        g.image ? null : h('span', { class: 'cname' }, g.name),
+        pic ? null : h('span', { class: 'cname' }, g.name),
         isSoftware(g) ? h('span', { class: 'kind badge' }, t('tag.software')) : null,
         h('span', { class: 'tag badge' }, tagOf(g))),
       h('div', { class: 'body' },
@@ -248,7 +269,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     }
   }
   function cancelInstall(slug) { call(A.cancelInstall(slug)).catch((e) => toast(errText(e), 'error')); }
-  function actionsFor(g, ctx) {
+  function actionsFor(g, ctx, trial) {
     const state = gameState(g);
     const prog = S.progress[g.slug];
     const actions = h('div', { class: 'actions' });
@@ -257,10 +278,11 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     } else if (state === 'locked') {
       actions.append(
         h('button', { class: 'btn primary', 'data-buy': g.slug, onclick: () => payModal({ product: 'game', slug: g.slug, title: g.name, price: money(g.price || 40) }) }, t('buy.game', { price: money(g.price || 40) })),
-        h('button', { class: 'link', onclick: () => { toPass(); } }, t('buy.orPass')));
+        h('button', { class: 'link', onclick: () => { toPass(); } }, t('buy.orPass')),
+        ...(trial ? [h('div', { class: 'trial', id: 'pass-trial-hint' }, t('pass.trial', { price: money(PASS_MONTH) }))] : []));
     } else if (state === 'install' && g.available === false) actions.append(h('button', { class: 'btn', disabled: true }, t('act.soon')));
-    else if (state === 'install' && isFree(g) && !S.obtained.includes(g.slug)) actions.append(h('button', { class: 'btn primary', 'data-obtain': g.slug, onclick: () => obtain(g) }, t('act.get')));
-    else if (state === 'install') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.download')));
+    else if (state === 'install' && isFree(g) && !S.obtained.includes(g.slug)) actions.append(h('button', { class: 'btn primary free', 'data-obtain': g.slug, onclick: () => obtain(g) }, t('act.install')));
+    else if (state === 'install') actions.append(h('button', { class: 'btn primary' + (isFree(g) ? ' free' : ''), onclick: () => install(g) }, isFree(g) ? t('act.install') : t('act.download')));
     else if (state === 'update') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.update')), h('button', { class: 'btn ghost sm', onclick: () => play(g) }, t('act.playAnyway')));
     else if (state === 'running') actions.append(h('button', { class: 'btn', disabled: true }, t('act.playing')));
     else actions.append(h('button', { class: 'btn play', onclick: () => play(g) }, isSoftware(g) ? t('act.launch') : t('act.play')));
@@ -291,7 +313,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     const trailer = media.find((m) => m.type === 'video');
     const poster = g.image || (shot && shot.url) || (trailer && trailer.thumb) || '';
     const state = gameState(g);
-    const accKey = { 'paintball-master': 'pink', 'pop-riot': 'yellow', 'boys-girls-ultimate': 'blue' }[g.slug];
+    const accKey = ACC_KEYS[g.slug];
     const bg = poster ? 'url("' + poster.replace(/["\\()]/g, '') + '")' : 'none';
     let video = null;
     if (trailer && !reducedMotion()) {
@@ -304,9 +326,9 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       : state === 'locked'
         ? h('div', { class: 'price-big' }, money(g.price || 40), h('small', {}, t('sale.once')))
         : h('div', { class: 'spot-state' }, h('span', { class: 'badge' }, tagOf(g)));
-    const actions = actionsFor(g, 'store');
+    const actions = actionsFor(g, 'store', true);
     actions.append(h('button', { class: 'btn ghost sm spot-view', type: 'button', onclick: () => openSale(g.slug) }, t('feat.view')));
-    return h('section', { class: 'spot', id: 'featured-banner', 'data-accent': accKey, 'aria-label': t('feat.badge') + ' : ' + g.name, style: '--ac-raw:' + (/^#[0-9a-f]{3,8}$/i.test(g.accent) ? g.accent : '#7A3CFF') },
+    return h('section', { class: 'spot', id: 'featured-banner', 'data-accent': accKey, 'aria-label': t('feat.badge') + ' : ' + g.name, style: accStyle(g) },
       h('div', { class: 'spot-media', style: 'background-image:' + bg, onclick: (ev) => { if (!ev.target.closest('button,a')) openSale(g.slug); } },
         poster ? null : h('span', { class: 'cname' }, g.name), video),
       h('div', { class: 'spot-body' },
@@ -329,9 +351,9 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   const offerLive = (o) => !!o && (offerEnd(o) == null || offerEnd(o) > Date.now());
   const offerLabel = (o) => o.label || (o.percent != null ? '-' + o.percent + ' %' : o.amountEur != null ? '-' + money(o.amountEur) : o.code);
   function offerApplies(o, product, slug) {
-    const a = o.appliesTo;
-    if (a == null || a === 'all' || a === '*') return true;
-    return (Array.isArray(a) ? a : [a]).some((x) => x === product || x === slug || (x === 'pass' && product !== 'game') || ((x === 'games' || x === 'game') && product === 'game'));
+    const a = o.appliesTo; // route publique : { pass: bool, games: bool } ; absent => on laisse le serveur trancher
+    if (!a || typeof a !== 'object') return true;
+    return product === 'game' ? !!a.games : !!a.pass;
   }
   function fmtLeft(ms) {
     const sec = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(sec / 86400), hh = Math.floor((sec % 86400) / 3600), mm = Math.floor((sec % 3600) / 60), ss = sec % 60;
@@ -343,7 +365,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     if (!offerLive(o)) return null;
     const end = offerEnd(o);
     return h('section', { class: 'offer', id: 'offer-strip', 'aria-label': t('offer.aria') },
-      h('span', { class: 'offer-main' }, h('b', {}, offerLabel(o)), ' · ' + t('offer.code', { code: o.code })),
+      h('span', { class: 'offer-main' }, h('b', {}, offerLabel(o)), o.text ? ' · ' + o.text : '', ' · ' + t('offer.code', { code: o.code })),
       end != null ? h('span', { class: 'offer-end' }, t('offer.until', { date: fmtDate(o.endsAt) }), ' · ', h('span', { class: 'offer-left', 'data-end': String(end) }, t('offer.left', { time: fmtLeft(end - Date.now()) }))) : null);
   }
   setInterval(() => {
@@ -378,7 +400,8 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         n >= 2 ? h('div', { class: 'pass-compare', id: 'pass-compare' },
           h('div', {}, same ? t('pass.units', { n, unit: money(unit), total: money(total) }) : t('pass.unitsMixed', { n, total: money(total) })),
           h('div', {}, h('b', {}, t('pass.yearly', { price: money(PASS_YEAR), months: monthsFree }))),
-          saving > 0 ? h('div', { class: 'pass-save' }, t('pass.saving', { amount: money(saving) })) : null) : null),
+          saving > 0 ? h('div', { class: 'pass-save' }, t('pass.saving', { amount: money(saving) })) : null) : null,
+        h('div', { class: 'pass-trial', id: 'pass-trial' }, t('pass.trial', { price: money(PASS_MONTH) }))),
       h('div', { class: 'pass-buy' },
         h('div', { class: 'pass-price' }, money(PASS_YEAR), h('small', {}, t('store.perYear'))),
         h('div', { class: 'note' }, t('store.yearNote', { price: money(PASS_YEAR / 12) })),
@@ -406,7 +429,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   function filterBar() {
     return h('div', { class: 'seg filters cathead', id: 'store-filters', role: 'group', 'aria-label': t('filter.label') },
       FILTERS.map(([id, key, fn]) => ({ id, key, n: S.games.filter(fn).length })).filter((f) => f.id !== 'mine' || f.n > 0).map((f) =>
-        h('button', { type: 'button', class: S.filter === f.id ? 'on' : '', 'data-filter': f.id, 'aria-pressed': String(S.filter === f.id), onclick: () => { S.filter = f.id; render(); } }, t(f.key), h('span', { class: 'cnt' }, String(f.n)))));
+        h('button', { type: 'button', class: (S.filter === f.id ? 'on' : '') + ' ft-' + f.id, 'data-filter': f.id, 'aria-pressed': String(S.filter === f.id), onclick: () => { S.filter = f.id; render(); } }, t(f.key), h('span', { class: 'cnt' }, String(f.n)))));
   }
 
 
@@ -448,7 +471,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     if (S.mi >= media.length) S.mi = 0;
     const cur = media[S.mi];
     const state = gameState(g), inst = S.installed[g.slug];
-    const accKey = { 'paintball-master': 'pink', 'pop-riot': 'yellow', 'boys-girls-ultimate': 'blue' }[g.slug];
+    const accKey = ACC_KEYS[g.slug];
     const badge = tagOf(g, state);
     const hero = cur
       ? h('div', { class: 'viewer' + (isVideo(cur) ? ' vid' : ''), title: isVideo(cur) ? null : t('sale.zoom') },
@@ -460,7 +483,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       m.thumb || !isVideo(m) ? h('img', { src: m.thumb || m.url, alt: '' }) : h('span', { class: 'vt' }), isVideo(m) ? h('span', { class: 'play-ic' }, '▶') : null))) : null;
     const row = (k, v) => v ? [h('dt', {}, k), h('dd', {}, v)] : null;
     const rq = g.requirements || {};
-    return h('div', { class: 'sale', 'data-accent': accKey, style: '--ac-raw:' + (/^#[0-9a-f]{3,8}$/i.test(g.accent) ? g.accent : '#7A3CFF') },
+    return h('div', { class: 'sale', 'data-accent': accKey, style: accStyle(g) },
       h('button', { class: 'btn ghost sm back', type: 'button', onclick: () => { if (opts.onBack) return opts.onBack(); S.sale = null; render(); } }, t('sale.back')),
       h('div', { class: 'sale-grid' },
         h('div', { class: 'sale-left' }, hero, strip),
@@ -470,7 +493,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
             h('p', { class: 'sub hook' }, g.tagline),
             isFree(g) ? h('div', { class: 'price-big' }, t('price.free'), h('small', {}, t('sale.freeNote')))
               : h('div', { class: 'price-big' }, isOwned(g) ? t('sale.owned') : money(g.price || 40), isOwned(g) ? null : h('small', {}, t('sale.once'))),
-            opts.preview ? h('div', { class: 'actions' }, h('button', { class: 'btn primary', type: 'button', disabled: true }, isFree(g) ? t('act.get') : t('buy.game', { price: money(g.price || 0) }))) : actionsFor(g, 'store'),
+            opts.preview ? h('div', { class: 'actions' }, h('button', { class: 'btn primary', type: 'button', disabled: true }, isFree(g) ? t('act.get') : t('buy.game', { price: money(g.price || 0) }))) : actionsFor(g, 'store', true),
             state === 'locked' && !opts.preview ? reassure() : null,
             (g.features || []).length ? h('ul', { class: 'pts', id: 'sale-points', 'aria-label': t('sale.points') }, g.features.slice(0, 3).map((f) => h('li', {}, f))) : null))),
       h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.details')), h('div', { class: 'panel details' }, h('dl', { class: 'kv sm' },

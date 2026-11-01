@@ -35,7 +35,7 @@ class StoreApi {
         signal: AbortSignal.timeout(20000)
       });
     } catch (e) {
-      throw new ApiError('network', 'Impossible de joindre le serveur. Vérifiez votre connexion.', 0);
+      throw new ApiError('network', 'Impossible de joindre le serveur. Vérifie ta connexion.', 0);
     }
     let data = null;
     try { data = await res.json(); } catch (_) { /* corps vide */ }
@@ -55,7 +55,7 @@ class StoreApi {
     const size = fs.statSync(filePath).size;
     const token = this.token;
     return new Promise((resolve, reject) => {
-      const net = () => reject(new ApiError('network', 'Impossible de joindre le serveur. Vérifiez votre connexion.', 0));
+      const net = () => reject(new ApiError('network', 'Impossible de joindre le serveur. Vérifie ta connexion.', 0));
       const req = lib.request(url, { method: 'POST', headers: { 'Content-Type': contentType, 'Content-Length': size, Accept: 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) } }, (res) => {
         const chunks = [];
         res.on('data', (c) => chunks.push(c));

@@ -320,7 +320,7 @@ handle('store:cancel', async () => {
 });
 handle('store:resume', async () => {
   if (demoMode) {
-    if (!demoState.pass || !demoState.pass.cancelAtPeriodEnd) throw new ApiError('not_cancelled', "Votre abonnement n'est pas résilié.");
+    if (!demoState.pass || !demoState.pass.cancelAtPeriodEnd) throw new ApiError('not_cancelled', "Ton abonnement n'est pas résilié.");
     if (demoState.pass.provider === 'paypal') throw new ApiError('resume_requires_new_subscription', 'PayPal ne permet pas de réactiver un abonnement résilié.');
     demoState.pass = { ...demoState.pass, cancelAtPeriodEnd: false };
     return { pass: demoState.pass };

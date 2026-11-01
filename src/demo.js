@@ -3,7 +3,7 @@
 const L = (fr, en, es, th, ms, de) => (de === undefined ? { fr, en, es, th, ms } : { fr, en, es, th, ms, de });
 const BASE = [
   { slug: 'paintball-master', name: 'Paintball Master', accent: '#FF3D7F', price: 40, version: '1.2.0', sizeMb: 180,
-    tagline: L('Vos viewers repeignent l\'écran à coups de cadeaux.', 'Your viewers repaint the screen, gift after gift.', 'Tus espectadores repintan la pantalla a golpe de regalos.', 'ผู้ชมสาดสีทั่วหน้าจอด้วยของขวัญ', 'Penonton anda mengecat semula skrin dengan hadiah.'),
+    tagline: L('Tes viewers repeignent l\'écran à coups de cadeaux.', 'Your viewers repaint the screen, gift after gift.', 'Tus espectadores repintan la pantalla a golpe de regalos.', 'ผู้ชมสาดสีทั่วหน้าจอด้วยของขวัญ', 'Penonton anda mengecat semula skrin dengan hadiah.'),
     description: L('Un jeu de peinture interactif pour TikTok LIVE.', 'An interactive paint game for TikTok LIVE.', 'Un juego de pintura interactivo para TikTok LIVE.', 'เกมสาดสีแบบอินเตอร์แอคทีฟสำหรับ TikTok LIVE', 'Permainan cat interaktif untuk TikTok LIVE.') },
   { slug: 'pop-riot', name: 'Pop Riot', accent: '#FFC400', price: 40, version: '1.0.3', sizeMb: 120,
     tagline: L('Des ballons à faire éclater en direct.', 'Balloons to pop live.', 'Globos para reventar en directo.', 'ลูกโป่งให้ยิงแตกสด ๆ', 'Belon untuk dipecahkan secara langsung.'),
@@ -14,8 +14,8 @@ const BASE = [
 ];
 // Logiciel gratuit de démonstration (accessible à tous, hors Game Pass)
 BASE.push({ slug: 'overlay-forge', name: 'Overlay Forge', kind: 'software', free: true, accent: '#19B38A', price: 0, version: '1.0.0', sizeMb: 60,
-  tagline: L('Créez vos overlays TikTok LIVE, gratuitement.', 'Build your TikTok LIVE overlays, for free.', 'Crea tus overlays de TikTok LIVE, gratis.', 'สร้างโอเวอร์เลย์ TikTok LIVE ได้ฟรี', 'Cipta overlay TikTok LIVE anda, percuma.'),
-  description: L('Un outil gratuit pour fabriquer des overlays de cadeaux et d\'actions pour vos jeux.', 'A free tool to build gift and action overlays for your games.', 'Una herramienta gratuita para crear overlays de regalos y acciones para tus juegos.', 'เครื่องมือฟรีสำหรับสร้างโอเวอร์เลย์ของขวัญและแอ็กชันสำหรับเกมของคุณ', 'Alat percuma untuk mencipta overlay hadiah dan tindakan untuk permainan anda.') });
+  tagline: L('Crée tes overlays TikTok LIVE, gratuitement.', 'Build your TikTok LIVE overlays, for free.', 'Crea tus overlays de TikTok LIVE, gratis.', 'สร้างโอเวอร์เลย์ TikTok LIVE ได้ฟรี', 'Cipta overlay TikTok LIVE anda, percuma.'),
+  description: L('Un outil gratuit pour fabriquer des overlays de cadeaux et d\'actions pour tes jeux.', 'A free tool to build gift and action overlays for your games.', 'Una herramienta gratuita para crear overlays de regalos y acciones para tus juegos.', 'เครื่องมือฟรีสำหรับสร้างโอเวอร์เลย์ของขวัญและแอ็กชันสำหรับเกมของคุณ', 'Alat percuma untuk mencipta overlay hadiah dan tindakan untuk permainan anda.') });
 const EXTRA = {
   needs: L('TikFinity (gratuit)', 'TikFinity (free)', 'TikFinity (gratis)', 'TikFinity (ฟรี)', 'TikFinity (percuma)', 'TikFinity (kostenlos)'),
   features: [
@@ -25,9 +25,9 @@ const EXTRA = {
     L('Interface multilingue : FR, EN, ES, TH, MS, DE', 'Multilingual interface: FR, EN, ES, TH, MS, DE', 'Interfaz multilingüe: FR, EN, ES, TH, MS, DE', 'อินเทอร์เฟซหลายภาษา: FR, EN, ES, TH, MS, DE', 'Antara muka berbilang bahasa: FR, EN, ES, TH, MS, DE'),
     L('Mises à jour automatiques via le launcher', 'Automatic updates through the launcher', 'Actualizaciones automáticas desde el launcher', 'อัปเดตอัตโนมัติผ่านแลนเชอร์', 'Kemas kini automatik melalui pelancar')],
   howItWorks: [
-    L('Lancez le jeu depuis le launcher.', 'Launch the game from the launcher.', 'Inicia el juego desde el launcher.', 'เปิดเกมจากแลนเชอร์', 'Lancarkan permainan dari pelancar.'),
-    L('Connectez TikFinity et associez vos cadeaux.', 'Connect TikFinity and link your gifts.', 'Conecta TikFinity y asocia tus regalos.', 'เชื่อมต่อ TikFinity แล้วผูกของขวัญของคุณ', 'Sambungkan TikFinity dan kaitkan hadiah anda.'),
-    L('Passez en direct, les cadeaux jouent pour vous.', 'Go live and let the gifts play for you.', 'Empieza el directo y deja que los regalos jueguen por ti.', 'เริ่มไลฟ์ แล้วให้ของขวัญเล่นแทนคุณ', 'Mulakan siaran langsung, hadiah bermain untuk anda.')]
+    L('Lance le jeu depuis le launcher.', 'Launch the game from the launcher.', 'Inicia el juego desde el launcher.', 'เปิดเกมจากแลนเชอร์', 'Lancarkan permainan dari pelancar.'),
+    L('Connecte TikFinity et associe tes cadeaux.', 'Connect TikFinity and link your gifts.', 'Conecta TikFinity y asocia tus regalos.', 'เชื่อมต่อ TikFinity แล้วผูกของขวัญของคุณ', 'Sambungkan TikFinity dan kaitkan hadiah anda.'),
+    L('Passe en direct, les cadeaux jouent pour toi.', 'Go live and let the gifts play for you.', 'Empieza el directo y deja que los regalos jueguen por ti.', 'เริ่มไลฟ์ แล้วให้ของขวัญเล่นแทนคุณ', 'Mulakan siaran langsung, hadiah bermain untuk anda.')]
 };
 // Textes allemands de la démo (ajoutés après coup pour ne pas alourdir les appels L ci-dessus).
 const DE = {
