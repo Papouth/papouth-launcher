@@ -400,7 +400,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         n >= 2 ? h('div', { class: 'pass-compare', id: 'pass-compare' },
           h('div', {}, same ? t('pass.units', { n, unit: money(unit), total: money(total) }) : t('pass.unitsMixed', { n, total: money(total) })),
           h('div', {}, h('b', {}, t('pass.yearly', { price: money(PASS_YEAR), months: monthsFree }))),
-          saving > 0 ? h('div', { class: 'pass-save' }, t('pass.saving', { amount: money(saving) })) : null) : null,
+          saving > 0 ? h('div', { class: 'pass-save' }, t('pass.saving', { amount: money(saving) }), h('span', { class: 'pass-tag' }, t('store.passTitle'))) : null) : null,
         h('div', { class: 'pass-trial', id: 'pass-trial' }, t('pass.trial', { price: money(PASS_MONTH) }))),
       h('div', { class: 'pass-buy' },
         h('div', { class: 'pass-price' }, money(PASS_YEAR), h('small', {}, t('store.perYear'))),

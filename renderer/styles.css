@@ -503,3 +503,29 @@ html[lang="de"] .btn,html[lang="de"] .pay,html[lang="de"] .tabs button,html[lang
 .benefits li::before{content:"\2713\FE0E";font-family:"Segoe UI Symbol","DejaVu Sans",sans-serif}
 .pass-trial{color:var(--text);background:var(--surface-2);border-left:4px solid var(--lime)}
 .pass-trial{margin-top:10px;padding:10px 14px;border-radius:0 10px 10px 0;font-weight:800;font-size:14px}
+
+/* ---------- v4 : un rôle par couleur. lime = agir, ambre = offre, violet = Game Pass, couleur du jeu = le jeu ---------- */
+:root[data-theme="night"]{--offer:#F5A524;--on-offer:#151515;--pass:#7C5CFF;--pass-ink:#B5A3FF}
+:root[data-theme="day"]{--offer:#C77700;--on-offer:#fff;--pass:#5B3FE0;--pass-ink:#5B3FE0}
+:root[data-theme] :is(.game,.sale,.spot) .btn.primary.free,:root[data-theme] .game .btn.primary:not(.play):not([data-buy]){background:var(--surface-2);color:var(--text);border-color:var(--border-strong)}
+.btn.primary.free{background:var(--surface-2);color:var(--text)}
+.benefits li::before{background:var(--surface-2);color:var(--text);border:1.5px solid var(--border);border-radius:6px;width:22px;height:22px}
+.safe li::before,.pts li::before{color:var(--text)}
+.filters button{border-radius:0;background:none;border:0;border-bottom:3px solid transparent;color:var(--text-muted);padding:6px 4px;margin-right:14px}
+.filters button.on,.filters .ft-tools.on{background:none;color:var(--text);border-bottom-color:var(--text)}
+.filters .ft-tools{border-color:transparent}
+.cathead.seg{gap:6px}
+.offer{background:var(--surface);color:var(--text);border-left:6px solid var(--offer);border-color:var(--offer)}
+.offer-main b,.offer-left{color:var(--offer)}
+.offer-end{color:var(--text)}
+.pass-card{border-top:3px solid var(--pass)}
+.pass-save{color:var(--text);font-weight:900;display:flex;align-items:center;gap:8px}
+.pass-tag{font-size:11px;font-weight:800;padding:1px 8px;border-radius:6px;background:var(--pass);color:#fff}
+.pass-trial{border-left-color:var(--pass)}
+.trial,.pay-amount .promo-new{color:var(--text)}
+.ach-count{color:var(--text)}
+.ach-bar i{background:var(--text)}
+.ach-chip.done{background:var(--text);color:var(--bg);border-color:var(--text)}
+.ach-chip.done .ach-mark{background:var(--bg);color:var(--text);border-color:var(--bg)}
+.toast{border-left-color:var(--border-strong)}
+.game .tag.badge.free,.badge.free{color:var(--lime);border-color:var(--lime)}
