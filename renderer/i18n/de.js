@@ -507,5 +507,7 @@
   "adm.act.promo.update": 'Promocode geändert',
   "adm.act.promo.pause": 'Promocode pausiert',
   "adm.act.promo.resume": 'Promocode reaktiviert',
-  "adm.act.promo.delete": 'Promocode gelöscht'
+  "adm.act.promo.delete": 'Promocode gelöscht',
+  'toast.readyShortcut': '{name} ist bereit. Verknüpfung auf dem Desktop erstellt.',
+  'card.shortcut': 'Installiert · Verknüpfung auf dem Desktop'
 };

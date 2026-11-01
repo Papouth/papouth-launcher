@@ -350,6 +350,26 @@ function makeProgress(slug, jobId, total0) {
     }
   };
 }
+// Raccourcis (Bureau + menu Démarrer) pour les logiciels uniquement ; les jeux se lancent via le launcher (licence). Échec : log seulement.
+function shortcutPaths(name) {
+  const file = String(name || '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim() + '.lnk';
+  if (file === '.lnk') return [];
+  const out = [];
+  try { out.push(path.join(app.getPath('desktop'), file)); } catch (_) { /* ignore */ }
+  try { out.push(path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', file)); } catch (_) { /* ignore */ }
+  return out;
+}
+function createShortcuts(slug, name, entry) {
+  if (process.platform !== 'win32' || !entry || !entry.path || !entry.exe) return false;
+  const exe = path.join(entry.path, entry.exe);
+  let made = 0;
+  for (const lnk of shortcutPaths(name || slug)) {
+    try { if (shell.writeShortcutLink(lnk, 'create', { target: exe, cwd: path.dirname(exe), icon: exe, iconIndex: 0, description: name || slug })) made++; }
+    catch (e) { console.warn('[raccourci]', lnk, e && e.message); }
+  }
+  return made > 0;
+}
+function removeShortcuts(name) { for (const lnk of shortcutPaths(name)) { try { fs.rmSync(lnk, { force: true }); } catch (e) { console.warn('[raccourci]', e && e.message); } } }
 async function runInstallJob(slug, job) {
   const pr = makeProgress(slug, job.id);
   const signal = job.ac.signal;
@@ -382,7 +402,10 @@ async function runInstallJob(slug, job) {
       if (!info || !info.url) throw new ApiError('no_download', 'Aucun téléchargement disponible pour ce jeu.');
       entry = await installer.install(slug, { ...info, name: job.name }, { signal, onProgress: pr.tick, onStage: (s) => pr.stage(s) });
     }
-    send('games:done', { slug, jobId: job.id, ok: true, entry });
+    const gi = catalogCache.find((x) => x.slug === slug);
+    let shortcut = false;
+    if (gi && gi.kind === 'software') shortcut = createShortcuts(slug, gi.name || job.name, entry);
+    send('games:done', { slug, jobId: job.id, ok: true, entry, shortcut });
   } catch (e) {
     send('games:done', { slug, jobId: job.id, ok: false, error: { code: e.code || 'error', message: e.message || 'Erreur inconnue.', extra: e.extra } });
   } finally {
@@ -416,6 +439,8 @@ handle('device:transfer', async () => {
 handle('games:uninstall', async (slug) => {
   if (running.has(slug)) throw new ApiError('running', 'Fermez le jeu avant de le désinstaller.');
   await installer.uninstall(slug);
+  const gi = catalogCache.find((x) => x.slug === slug);
+  if (gi && gi.kind === 'software') removeShortcuts(gi.name);
   return true;
 });
 

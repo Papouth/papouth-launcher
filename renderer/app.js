@@ -207,6 +207,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       h('div', { class: 'body' },
         h('div', { class: 'nm' }, g.name), h('div', { class: 'tg' }, g.tagline),
         h('div', { class: 'meta' }, 'v' + g.version + (g.sizeMb ? ' · ' + t('card.size', { size: window.I18N.num(g.sizeMb) }) : '') + (inst ? ' · ' + t('card.installed', { version: inst.version }) : '')),
+        inst && isSoftware(g) && hasShortcut(g.slug) ? h('div', { class: 'meta' }, t('card.shortcut')) : null,
         actions));
   }
   // ----- Progression des téléchargements (mise à jour ciblée du DOM, sans re-rendu complet) -----
@@ -519,12 +520,16 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     catch (e) { toast(errText(e), 'error'); return; }
     install(g);
   }
+  // Mémorise (localement) que le raccourci Bureau d'un logiciel a été créé
+  const SC_KEY = 'papouth-shortcuts';
+  const hasShortcut = (slug) => { try { return (JSON.parse(localStorage.getItem(SC_KEY) || '[]') || []).includes(slug); } catch (e) { return false; } };
+  function markShortcut(slug, on) { try { const l = (JSON.parse(localStorage.getItem(SC_KEY) || '[]') || []).filter((x) => x !== slug); if (on) l.push(slug); localStorage.setItem(SC_KEY, JSON.stringify(l)); } catch (e) { /* ignore */ } }
   async function onInstallDone(d) {
     delete S.progress[d.slug];
     const g = S.games.find((x) => x.slug === d.slug) || { slug: d.slug, name: d.slug };
     try { S.installed = unwrap(await A.installed()) || {}; } catch (_) { /* inchangé */ }
     render();
-    if (d.ok) return toast(t('toast.ready', { name: g.name }));
+    if (d.ok) { if (d.shortcut) markShortcut(d.slug, true); render(); return toast(d.shortcut ? t('toast.readyShortcut', { name: g.name }) : t('toast.ready', { name: g.name })); }
     const e = d.error || {};
     if (e.code === 'cancelled') return toast(t('dl.cancelled', { name: g.name }));
     if (e.code === 'device_limit') return deviceModal(e.extra || {}, () => install(g));
@@ -557,7 +562,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   }
   async function uninstall(g) {
     if (!confirm(t('toast.confirmUninstall', { name: g.name }))) return;
-    try { await call(A.uninstall(g.slug)); delete S.installed[g.slug]; render(); toast(t('toast.uninstalled', { name: g.name })); } catch (e) { toast(errText(e), 'error'); }
+    try { await call(A.uninstall(g.slug)); delete S.installed[g.slug]; markShortcut(g.slug, false); render(); toast(t('toast.uninstalled', { name: g.name })); } catch (e) { toast(errText(e), 'error'); }
   }
   async function play(g) { try { await call(A.play(g.slug)); } catch (e) { toast(errText(e), 'error'); } }
 

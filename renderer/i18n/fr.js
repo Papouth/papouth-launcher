@@ -507,5 +507,7 @@
   "adm.act.promo.update": 'Code promo modifié',
   "adm.act.promo.pause": 'Code promo mis en pause',
   "adm.act.promo.resume": 'Code promo réactivé',
-  "adm.act.promo.delete": 'Code promo supprimé'
+  "adm.act.promo.delete": 'Code promo supprimé',
+  'toast.readyShortcut': '{name} est prêt. Raccourci créé sur le Bureau.',
+  'card.shortcut': 'Installé · raccourci sur le Bureau'
 };

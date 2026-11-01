@@ -507,5 +507,7 @@
   "adm.act.promo.update": 'Kod promo diubah',
   "adm.act.promo.pause": 'Kod promo dijeda',
   "adm.act.promo.resume": 'Kod promo diaktifkan semula',
-  "adm.act.promo.delete": 'Kod promo dipadam'
+  "adm.act.promo.delete": 'Kod promo dipadam',
+  'toast.readyShortcut': '{name} sudah sedia. Pintasan dicipta pada Desktop.',
+  'card.shortcut': 'Dipasang · pintasan pada Desktop'
 };

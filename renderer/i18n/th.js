@@ -507,5 +507,7 @@
   "adm.act.promo.update": 'แก้ไขโค้ดส่วนลด',
   "adm.act.promo.pause": 'หยุดโค้ดส่วนลดชั่วคราว',
   "adm.act.promo.resume": 'เปิดใช้โค้ดส่วนลดอีกครั้ง',
-  "adm.act.promo.delete": 'ลบโค้ดส่วนลด'
+  "adm.act.promo.delete": 'ลบโค้ดส่วนลด',
+  'toast.readyShortcut': '{name} พร้อมแล้ว สร้างทางลัดบนเดสก์ท็อปแล้ว',
+  'card.shortcut': 'ติดตั้งแล้ว · มีทางลัดบนเดสก์ท็อป'
 };

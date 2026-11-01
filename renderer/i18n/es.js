@@ -507,5 +507,7 @@
   "adm.act.promo.update": 'Código promo modificado',
   "adm.act.promo.pause": 'Código promo en pausa',
   "adm.act.promo.resume": 'Código promo reactivado',
-  "adm.act.promo.delete": 'Código promo eliminado'
+  "adm.act.promo.delete": 'Código promo eliminado',
+  'toast.readyShortcut': '{name} está listo. Acceso directo creado en el Escritorio.',
+  'card.shortcut': 'Instalado · acceso directo en el Escritorio'
 };
