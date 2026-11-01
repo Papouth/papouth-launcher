@@ -110,7 +110,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
     const L = 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
     const onDark = (L + 0.05) / 0.0575, onWhite = 1.05 / (L + 0.05);
-    if (isTool(g)) return '--ac-raw:#2FB67C;--ac:' + (night ? '#2FB67C' : '#1F9C68') + ';--on-ac:' + (night ? '#06150E' : '#ffffff');
+    if (isTool(g)) return '--ac-raw:#3A3A4A;--ac:var(--surface-2);--on-ac:var(--text)';
     return '--ac-raw:' + hex + ';--on-ac:' + (onDark >= onWhite ? '#151515' : '#ffffff');
   }
   const inLibrary = (g) => hasAccess(g) && (!isFree(g) || !!S.installed[g.slug] || S.obtained.includes(g.slug));
@@ -228,7 +228,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       h('div', { class: 'cover', style: 'background-image:' + bg },
         pic ? null : h('span', { class: 'cname' }, g.name),
         isSoftware(g) ? h('span', { class: 'kind badge' }, t('tag.software')) : null,
-        h('span', { class: 'tag badge' }, tagOf(g))),
+        h('span', { class: 'tag badge' + (isFree(g) ? ' free' : '') }, tagOf(g))),
       h('div', { class: 'body' },
         h('div', { class: 'nm' }, g.name), h('div', { class: 'tg' }, g.tagline),
         h('div', { class: 'meta' }, 'v' + g.version + (g.sizeMb ? ' · ' + t('card.size', { size: window.I18N.num(g.sizeMb) }) : '') + (inst ? ' · ' + t('card.installed', { version: inst.version }) : '')),

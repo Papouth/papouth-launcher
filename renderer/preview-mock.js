@@ -19,13 +19,13 @@
     description: L('Un outil gratuit pour fabriquer des overlays de cadeaux et d\'actions pour tes jeux.', 'A free tool to build gift and action overlays for your games.', 'Una herramienta gratuita para crear overlays de regalos y acciones para tus juegos.', 'เครื่องมือฟรีสำหรับสร้างโอเวอร์เลย์ของขวัญและแอ็กชันสำหรับเกมของคุณ', 'Alat percuma untuk mencipta overlay hadiah dan tindakan untuk permainan anda.') });
   // Catalogue de démonstration élargi (aperçu uniquement) : couvertures sans média => teintes neutres
   const MORE = [
-    ['spook-sweepers', 'Spook Sweepers', '#4B4F6B', 'Chasse aux fantômes : chaque cadeau lâche une vague à balayer.', 'Ghost hunt: every gift releases a wave to sweep away.'],
-    ['find-the-key', 'Find The Key', '#4A5A63', 'Les viewers cherchent la clé cachée, les cadeaux donnent des indices.', 'Viewers hunt the hidden key, gifts reveal hints.'],
-    ['pay-the-pig', 'Pay The Pig', '#5B4B55', 'Nourrir la tirelire : plus les cadeaux tombent, plus elle grossit.', 'Feed the piggy bank: the more gifts, the bigger it gets.'],
+    ['spook-sweepers', 'Spook Sweepers', '#4B4F6B', 'Chasse aux fantômes : chaque cadeau lâche une vague à aspirer.', 'Ghost hunt: every gift releases a wave to vacuum up.'],
     ['splash', 'Splash', '#3F5560', 'Chaque cadeau fait plonger un nouveau concurrent.', 'Every gift drops a new contestant into the pool.'],
-    ['tiktok-tower', 'TikTok Tower', '#52505F', 'Une tour à grimper, les cadeaux donnent un coup de pouce.', 'A tower to climb, gifts give a boost.']
+    ['find-the-key', 'Find The Key', '#4A5A63', 'Les viewers cherchent la clé cachée, les cadeaux donnent des indices.', 'Viewers hunt the hidden key, gifts reveal hints.'],
+    ['pay-the-pig', 'Pay The Pig', '#5B4B55', 'Nourris la tirelire : plus les cadeaux tombent, plus elle grossit.', 'Feed the piggy bank: the more gifts, the bigger it gets.']
   ];
   for (const [slug, name, accent, fr, en] of MORE) BASE.push({ slug, name, accent, price: 40, version: '1.0.0', sizeMb: 150, tagline: L(fr, en, en, en, en), description: L(fr, en, en, en, en) });
+  BASE.push({ slug: 'pulsaaar', name: 'Pulsaaar', kind: 'software', free: true, accent: '#19B38A', price: 0, version: '1.0.0', sizeMb: 40, tagline: L('Outil gratuit pour tes lives TikTok.', 'Free tool for your TikTok lives.', 'Free tool for your TikTok lives.', 'Free tool for your TikTok lives.', 'Free tool for your TikTok lives.'), description: L('Outil gratuit.', 'Free tool.', 'Free tool.', 'Free tool.', 'Free tool.') });
   const EXTRA = {
     needs: L('TikFinity (gratuit)', 'TikFinity (free)', 'TikFinity (gratis)', 'TikFinity (ฟรี)', 'TikFinity (percuma)'),
     features: [
@@ -54,11 +54,10 @@
   const probe = (u) => new Promise((res) => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = u; });
   const DEMO_MEDIA = { 'paintball-master': [{ type: 'video', url: 'trailer.mp4', thumb: 'trailer-poster.jpg' }, { type: 'image', url: '00-cover.jpg' }, { type: 'image', url: '01.jpg' }, { type: 'image', url: '02.jpg' }, { type: 'image', url: '03.jpg' }, { type: 'image', url: '04.jpg' }], 'pop-riot': [{ type: 'video', url: 'trailer.mp4', thumb: 'trailer-poster.jpg' }, { type: 'image', url: '00-cover.jpg' }, { type: 'image', url: '01.jpg' }, { type: 'image', url: '02.jpg' }, { type: 'image', url: '03.jpg' }, { type: 'image', url: '04.jpg' }], 'boys-girls-ultimate': [{ type: 'image', url: '00-cover.jpg' }] };
   // Médias réels de démo réutilisés pour les jeux fictifs (aperçu uniquement) : pas de couverture, donc 1re capture en repli
-  const SRC = { 'spook-sweepers': 'pop-riot', 'find-the-key': 'paintball-master', 'pay-the-pig': 'pop-riot', 'splash': 'paintball-master', 'tiktok-tower': 'pop-riot', 'overlay-forge': 'paintball-master' };
-  const SHOT = { 'spook-sweepers': ['02.jpg', '03.jpg'], 'find-the-key': ['02.jpg', '03.jpg'], 'pay-the-pig': ['04.jpg', '01.jpg'], 'splash': ['04.jpg', '01.jpg'], 'tiktok-tower': ['03.jpg', '04.jpg'], 'overlay-forge': ['03.jpg'] };
-  for (const k of Object.keys(SHOT)) DEMO_MEDIA[k] = SHOT[k].map((u) => ({ type: 'image', url: u }));
+  const SRC = {};
+  DEMO_MEDIA['spook-sweepers'] = [{ type: 'image', url: '00-cover.png' }, { type: 'image', url: '01.png' }];
   const dirOf = (slug) => SRC[slug] || slug;
-  const coverOf = (slug, list) => (list.some((m) => m.url === '00-cover.jpg') ? 'demo-media/' + dirOf(slug) + '/00-cover.jpg' : '');
+  const coverOf = (slug, list) => (list.find((m) => /^00-cover/.test(m.url)) ? 'demo-media/' + dirOf(slug) + '/' + list.find((m) => /^00-cover/.test(m.url)).url : '');
   async function loadMedia() {
     for (const g of games) {
       const list = DEMO_MEDIA[g.slug] || [];
@@ -70,7 +69,7 @@
   let ent = {
     pass: hasPass ? { active: true, plan: 'yearly', provider: q.get('provider') || 'stripe', renewsAt: '2027-03-14T00:00:00Z', cancelAtPeriodEnd: q.get('cancelled') === '1' } : { active: false, plan: null, provider: null, renewsAt: null, cancelAtPeriodEnd: false },
     owned: hasPass ? [] : ['pop-riot'],
-    access: hasPass ? games.map((g) => g.slug) : ['pop-riot', 'overlay-forge']
+    access: hasPass ? games.map((g) => g.slug) : ['pop-riot', 'overlay-forge', 'pulsaaar']
   };
   let obtained = q.get('obtained') === '1' ? ['overlay-forge'] : [];
   let installed = hasPass ? { 'paintball-master': { version: '1.0.0', exe: 'a.exe', path: 'C:\\Papouth\\Games\\paintball-master' }, 'pop-riot': { version: '1.0.3', exe: 'a.exe', path: 'C:\\x' } } : { 'pop-riot': { version: '1.0.3', exe: 'a.exe', path: 'C:\\x' } };

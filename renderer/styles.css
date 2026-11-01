@@ -473,34 +473,33 @@ html[lang="de"] .btn,html[lang="de"] .pay,html[lang="de"] .tabs button,html[lang
 .cathead.seg{justify-content:flex-start}
 .pay-amount .promo-new{font-size:32px}.pay-amount .promo-old{font-size:18px;font-weight:700}
 
-/* ---------- Couleur : accent de chaque jeu, vert franc pour les outils gratuits, contrastes AA ---------- */
-:root[data-theme="night"]{--good:#4FD18B;--on-good:#06150E;--brand-text:#B9A4FF;--free:#2FB67C;--on-free:#06150E}
-:root[data-theme="day"]{--good:#0F7A48;--on-good:#fff;--brand-text:#5B34C9;--free:#1F9C68;--on-free:#fff}
-.game{border-top:8px solid var(--ac)}
+/* ---------- Charte : une seule couleur d'action (lime), accent du jeu seulement sur sa vignette et un liseré de 3 px ---------- */
+:root[data-theme="night"]{--good:var(--lime);--lime-ink:#151515}
+:root[data-theme="day"]{--good:#5E8A00;--lime-ink:#151515}
+.game,.spot,.sale .panel.buy{border-top:3px solid var(--ac)}
 .game .cname,.viewer.empty-media,.steps b,.spot .cname{color:var(--on-ac,var(--on-bright))}
-.game .tag.badge,.spot-badge,.game .kind.badge{background:var(--ac);color:var(--on-ac,var(--on-bright));border-color:var(--ac)}
-.game .kind.badge{left:10px;background:var(--surface);color:var(--text);border-color:var(--border)}
-:root[data-theme] :is(.game,.sale .panel.buy,.spot) .btn.primary{background:var(--ac);color:var(--on-ac,var(--on-bright))}
-.sale .panel.buy{border-top:8px solid var(--ac)}
-.spot{border-top:8px solid var(--ac)}
-.benefits li::before{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;line-height:1}
+:root[data-theme] :is(.game,.sale,.spot) .btn.primary,:root[data-theme] .pass-card .btn.primary,:root[data-theme] .modal .btn.primary,.btn.primary.free,.btn.primary.big{background:var(--lime);color:var(--lime-ink);border-color:var(--border-strong)}
+:root[data-theme] :is(.game,.sale,.spot) .btn.play{background:var(--lime);color:var(--lime-ink)}
+.btn.play{background:var(--lime);color:var(--lime-ink)}
+.game .tag.badge,.spot-badge,.badge,.badge.pass,.badge.demo{background:var(--surface-2);color:var(--text);border-color:var(--border);transform:none}
+.game .tag.badge.free,.badge.free{background:transparent;color:var(--good);border-color:var(--lime)}
+.game .kind.badge{background:var(--surface-2);color:var(--text)}
+.benefits li::before{background:var(--lime);color:var(--lime-ink)}
 .safe li::before,.pts li::before{color:var(--good)}
-.offer{background:var(--warn);color:#151515;border:2.5px solid var(--border-strong)}
-.offer-end,.offer-left{color:#151515}
-.pass-card{border-top:8px solid var(--brand)}
-:root[data-theme] .pass-card .btn.primary,:root[data-theme] .modal .btn.primary{background:var(--brand);color:#fff}
-.pass-price{color:var(--brand-text)}.pass-price small{color:var(--text-muted)}
-.pass-save{color:var(--good)}
-.pass-trial{margin-top:10px;padding:10px 14px;border-left:4px solid var(--good);background:var(--surface-2);border-radius:0 10px 10px 0;font-weight:800;font-size:14px}
-.trial{margin-top:4px;font-size:12.5px;font-weight:800;color:var(--good)}
-.filters button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
-.filters .ft-tools{border-color:var(--free)}
-.filters .ft-tools.on{background:var(--free);color:var(--on-free);border-color:var(--free)}
-.pay-amount .promo-new{color:var(--good)}
-.ach-count{color:var(--good)}
-.ach-bar i{background:var(--good)}
-.ach-chip.done{background:var(--good);color:var(--on-good);border-color:var(--good)}
-.ach-chip.done .ach-mark{background:var(--on-good);color:var(--good);border-color:var(--on-good)}
-.spot-media{max-height:none;align-self:stretch;min-height:230px}
-.spot .actions .trial{flex-basis:100%;order:5;margin-top:0}
-.spot .actions .spot-view{order:4}
+.offer{background:var(--surface);color:var(--text);border:var(--bd);border-left:6px solid var(--lime)}
+.offer-main b,.offer-left{color:var(--good)}
+.offer-end{color:var(--text-muted)}
+.pass-card{border-top:3px solid var(--lime)}
+.pass-price{color:var(--text)}
+.pass-save,.pay-amount .promo-new,.ach-count,.trial{color:var(--good)}
+.pass-trial{border-left-color:var(--lime)}
+.filters button.on,.filters .ft-tools.on{background:var(--lime);color:var(--lime-ink);border-color:var(--lime)}
+.filters .ft-tools{border-color:var(--border)}
+.ach-bar i{background:var(--lime)}
+.ach-chip.done{background:var(--lime);color:var(--lime-ink);border-color:var(--lime)}
+.ach-chip.done .ach-mark{background:var(--lime-ink);color:var(--lime);border-color:var(--lime-ink)}
+.nav button.on{background:var(--inv-bg)}
+.toast{background:var(--surface-2);color:var(--text);border-left:5px solid var(--lime)}
+.benefits li::before{content:"\2713\FE0E";font-family:"Segoe UI Symbol","DejaVu Sans",sans-serif}
+.pass-trial{color:var(--text);background:var(--surface-2);border-left:4px solid var(--lime)}
+.pass-trial{margin-top:10px;padding:10px 14px;border-radius:0 10px 10px 0;font-weight:800;font-size:14px}
