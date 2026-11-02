@@ -509,5 +509,7 @@
   "adm.act.promo.resume": 'Promo code resumed',
   "adm.act.promo.delete": 'Promo code deleted',
   'toast.readyShortcut': '{name} is ready. Shortcut created on the Desktop.',
-  'card.shortcut': 'Installed · shortcut on the Desktop'
+  'card.shortcut': 'Installed · shortcut on the Desktop',
+  'act.open': 'Open',
+  'err.contents': 'Contents: {list}'
 };

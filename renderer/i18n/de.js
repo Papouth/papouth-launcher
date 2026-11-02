@@ -509,5 +509,7 @@
   "adm.act.promo.resume": 'Promocode reaktiviert',
   "adm.act.promo.delete": 'Promocode gelöscht',
   'toast.readyShortcut': '{name} ist bereit. Verknüpfung auf dem Desktop erstellt.',
-  'card.shortcut': 'Installiert · Verknüpfung auf dem Desktop'
+  'card.shortcut': 'Installiert · Verknüpfung auf dem Desktop',
+  'act.open': 'Öffnen',
+  'err.contents': 'Inhalt: {list}'
 };

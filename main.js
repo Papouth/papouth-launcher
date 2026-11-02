@@ -362,9 +362,10 @@ function shortcutPaths(name) {
 function createShortcuts(slug, name, entry) {
   if (process.platform !== 'win32' || !entry || !entry.path || !entry.exe) return false;
   const exe = path.join(entry.path, entry.exe);
+  const web = entry.type === 'web'; // appli web : le raccourci ouvre index.html, avec l'icône du launcher
   let made = 0;
   for (const lnk of shortcutPaths(name || slug)) {
-    try { if (shell.writeShortcutLink(lnk, 'create', { target: exe, cwd: path.dirname(exe), icon: exe, iconIndex: 0, description: name || slug })) made++; }
+    try { if (shell.writeShortcutLink(lnk, 'create', { target: exe, cwd: path.dirname(exe), icon: web ? process.execPath : exe, iconIndex: 0, description: name || slug })) made++; }
     catch (e) { console.warn('[raccourci]', lnk, e && e.message); }
   }
   return made > 0;
@@ -400,7 +401,7 @@ async function runInstallJob(slug, job) {
       }
       const info = await api.download(slug, hwid);
       if (!info || !info.url) throw new ApiError('no_download', 'Aucun téléchargement disponible pour ce jeu.');
-      entry = await installer.install(slug, { ...info, name: job.name }, { signal, onProgress: pr.tick, onStage: (s) => pr.stage(s) });
+      entry = await installer.install(slug, { ...info, name: job.name, software: !!(catalogCache.find((x) => x.slug === slug) || {}).kind && catalogCache.find((x) => x.slug === slug).kind === 'software' }, { signal, onProgress: pr.tick, onStage: (s) => pr.stage(s) });
     }
     const gi = catalogCache.find((x) => x.slug === slug);
     let shortcut = false;
@@ -464,13 +465,21 @@ handle('games:play', async (slug) => {
     setTimeout(() => { running.delete(slug); send('games:state', { slug, running: false }); }, 6000);
     return true;
   }
+  if (entry.type === 'web') { // appli web (logiciel) : ouverte dans le navigateur par défaut, sans licence
+    const page = path.join(entry.path, entry.exe);
+    if (!fs.existsSync(page)) throw new ApiError('missing_exe', "Exécutable introuvable. Réinstallez le jeu.");
+    const err = await shell.openPath(page);
+    if (err) throw new ApiError('launch_failed', err);
+    return true;
+  }
   const hwid = await getHwid();
   const { token } = await api.launchToken(slug, hwid);
   let exePath = path.join(entry.path, entry.exe);
-  if (!fs.existsSync(exePath)) { // installation ancienne ou exe déplacé : on le retrouve (récursif) et on corrige installed.json
+  if (!fs.existsSync(exePath)) { // installation ancienne, exe déplacé ou installeur parti ailleurs : on le retrouve et on corrige installed.json
     try {
       const g = (catalogCache || []).find((x) => x.slug === slug);
-      entry.exe = await installer.resolveExe(entry.path, { exe: entry.exe, slug, name: g && g.name });
+      const r = await installer.resolveExeOrFind(entry, { exe: entry.exe, slug, name: g && g.name });
+      entry.exe = r.exe; entry.path = r.dir;
       m[slug] = entry; await installer.writeManifest(m);
       exePath = path.join(entry.path, entry.exe);
     } catch (_) { throw new ApiError('missing_exe', "Exécutable introuvable. Réinstallez le jeu."); }

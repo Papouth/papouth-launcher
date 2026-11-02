@@ -260,7 +260,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     else if (state === 'install') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.download')));
     else if (state === 'update') actions.append(h('button', { class: 'btn primary', onclick: () => install(g) }, t('act.update')), h('button', { class: 'btn ghost sm', onclick: () => play(g) }, t('act.playAnyway')));
     else if (state === 'running') actions.append(h('button', { class: 'btn', disabled: true }, t('act.playing')));
-    else actions.append(h('button', { class: 'btn play', onclick: () => play(g) }, isSoftware(g) ? t('act.launch') : t('act.play')));
+    else actions.append(h('button', { class: 'btn play', onclick: () => play(g) }, (S.installed[g.slug] && S.installed[g.slug].type === 'web') ? t('act.open') : isSoftware(g) ? t('act.launch') : t('act.play')));
 
     if (ctx === 'library' && S.installed[g.slug] && !prog) {
       actions.append(h('div', { class: 'row' },
@@ -533,7 +533,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     const e = d.error || {};
     if (e.code === 'cancelled') return toast(t('dl.cancelled', { name: g.name }));
     if (e.code === 'device_limit') return deviceModal(e.extra || {}, () => install(g));
-    if (e.code === 'exe_not_found') return toast(t('err.exe_not_found') + (e.extra && e.extra.found ? ' (' + e.extra.found + ')' : ''), 'error');
+    if (e.code === 'exe_not_found') return toast(t('err.exe_not_found') + ((e.extra && e.extra.found) || e.message ? ' ' + t('err.contents', { list: (e.extra && e.extra.found) || e.message }) : ''), 'error');
     toast(errText(e), 'error');
   }
   // Compte déjà utilisé sur un autre PC : proposer de basculer sur ce PC (1 changement / 30 jours)

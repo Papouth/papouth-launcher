@@ -509,5 +509,7 @@
   "adm.act.promo.resume": 'Código promo reactivado',
   "adm.act.promo.delete": 'Código promo eliminado',
   'toast.readyShortcut': '{name} está listo. Acceso directo creado en el Escritorio.',
-  'card.shortcut': 'Instalado · acceso directo en el Escritorio'
+  'card.shortcut': 'Instalado · acceso directo en el Escritorio',
+  'act.open': 'Abrir',
+  'err.contents': 'Contenido: {list}'
 };

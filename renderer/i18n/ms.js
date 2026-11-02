@@ -509,5 +509,7 @@
   "adm.act.promo.resume": 'Kod promo diaktifkan semula',
   "adm.act.promo.delete": 'Kod promo dipadam',
   'toast.readyShortcut': '{name} sudah sedia. Pintasan dicipta pada Desktop.',
-  'card.shortcut': 'Dipasang · pintasan pada Desktop'
+  'card.shortcut': 'Dipasang · pintasan pada Desktop',
+  'act.open': 'Buka',
+  'err.contents': 'Kandungan: {list}'
 };

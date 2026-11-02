@@ -509,5 +509,7 @@
   "adm.act.promo.resume": 'Code promo réactivé',
   "adm.act.promo.delete": 'Code promo supprimé',
   'toast.readyShortcut': '{name} est prêt. Raccourci créé sur le Bureau.',
-  'card.shortcut': 'Installé · raccourci sur le Bureau'
+  'card.shortcut': 'Installé · raccourci sur le Bureau',
+  'act.open': 'Ouvrir',
+  'err.contents': 'Contenu : {list}'
 };

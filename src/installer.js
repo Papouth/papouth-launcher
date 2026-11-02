@@ -157,6 +157,19 @@ function runAndWait(exe, switches, { cwd, timeoutMs, signal }) {
 
 const fileKind = async (f) => { const h = await readHead(f, 4); return h[0] === 0x50 && h[1] === 0x4b ? 'zip' : h[0] === 0x4d && h[1] === 0x5a ? 'exe' : 'other'; };
 
+// Appli web (logiciel sans .exe) : index.html à la racine ou à 1 niveau. Retourne le chemin relatif ("index.html" ou "dossier/index.html") ou null.
+async function findWebIndex(dir) {
+  try {
+    if ((await fsp.stat(path.join(dir, 'index.html'))).isFile()) return 'index.html';
+  } catch (_) { /* suivant */ }
+  let ents; try { ents = await fsp.readdir(dir, { withFileTypes: true }); } catch (_) { return null; }
+  for (const e of ents.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+    if (!e.isDirectory()) continue;
+    try { if ((await fsp.stat(path.join(dir, e.name, 'index.html'))).isFile()) return e.name + '/index.html'; } catch (_) { /* suivant */ }
+  }
+  return null;
+}
+
 // Dossiers d'installation usuels pour un installeur inconnu (NSIS/Inno non reconnu).
 async function findInProgramDirs(want) {
   const roots = [path.join(process.env.LOCALAPPDATA || '', 'Programs'), process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean);
@@ -191,7 +204,7 @@ async function install(slug, info, ctl) {
     const kind = await fileKind(part);
     const isInstaller = info.kind === 'installer';
     onStage('extract');
-    let installerExe = null;
+    let installerExe = null, portableName = null;
     if (kind === 'zip') {
       const target = isInstaller ? stage : dir;
       await fsp.rm(target, { recursive: true, force: true });
@@ -211,9 +224,16 @@ async function install(slug, info, ctl) {
           await fsp.rmdir(inner);
         }
       }
-    } else if (kind === 'exe' && isInstaller) {
-      installerExe = part + '.exe';
+    } else if (kind === 'exe' && (isInstaller || (await installerFlavor(part)) !== 'unknown')) {
+      installerExe = part + '.exe'; // installeur déclaré, ou reconnu (NSIS / Inno Setup) malgré un type manquant
       await fsp.rename(part, installerExe);
+    } else if (kind === 'exe') {
+      // exe portable seul : copié tel quel dans le dossier du produit
+      await fsp.rm(dir, { recursive: true, force: true });
+      await fsp.mkdir(dir, { recursive: true });
+      const fname = (String(info.exe || '').replace(/\\/g, '/').split('/').pop() || '').replace(/[^\w .()-]/g, '') || slug + '.exe';
+      portableName = /\.exe$/i.test(fname) ? fname : fname + '.exe';
+      await fsp.rename(part, path.join(dir, portableName));
     } else {
       throw new ApiError('bad_package', 'Le fichier téléchargé n\'est pas valide (ni .zip ni installeur).');
     }
@@ -229,15 +249,20 @@ async function install(slug, info, ctl) {
       else if (flavor === 'inno') await runAndWait(installerExe, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/DIR="' + dir + '"'], opts);
       else await runAndWait(installerExe, [], { ...opts, timeoutMs: 30 * 60 * 1000 });
     }
-    let rel;
+    let rel, web = false;
     try { rel = await resolveExe(root, want); }
     catch (e) {
-      const alt = installerExe && silent === 'unknown' ? await findInProgramDirs(want) : null;
-      if (!alt) throw e;
-      root = alt.dir; rel = alt.exe;
+      // Installeur (tout type) qui n'a pas respecté le dossier demandé : on cherche dans les dossiers de programmes
+      const alt = installerExe ? await findInProgramDirs(want) : null;
+      if (alt) { root = alt.dir; rel = alt.exe; }
+      else {
+        const idx = info.software && !installerExe ? await findWebIndex(root) : null; // appli web : logiciel uniquement
+        if (!idx) throw e;
+        rel = idx; web = true;
+      }
     }
     const m = await readManifest();
-    m[slug] = { version: info.version, exe: rel, path: root, ...(installerExe ? { kind: 'installer', silent } : {}) };
+    m[slug] = { version: info.version, exe: rel, path: root, ...(web ? { type: 'web' } : {}), ...(installerExe && root === dir ? { kind: 'installer', silent } : installerExe ? { kind: 'installer', silent, external: true } : {}) };
     await writeManifest(m);
     return m[slug];
   } finally {
@@ -269,9 +294,17 @@ async function uninstall(slug) {
   await writeManifest(m);
 }
 
+// Au lancement : le manifeste pointe vers un chemin disparu -> on retrouve l'exe dans le dossier puis dans les dossiers de programmes.
+async function resolveExeOrFind(entry, want) {
+  try { return { dir: entry.path, exe: await resolveExe(entry.path, want) }; } catch (e) {
+    const alt = await findInProgramDirs(want);
+    if (alt) return alt;
+    throw e;
+  }
+}
 const _install = install, _uninstall = uninstall, _resolveExe = resolveExe, _migrate = migrateLegacy;
 module.exports = {
   migrateLegacy: () => noAsar(_migrate), readManifest, writeManifest,
   install: (...a) => noAsar(() => _install(...a)), uninstall: (...a) => noAsar(() => _uninstall(...a)),
-  resolveExe: (...a) => noAsar(() => _resolveExe(...a)), installerFlavor
+  resolveExe: (...a) => noAsar(() => _resolveExe(...a)), installerFlavor, findInProgramDirs, findWebIndex, resolveExeOrFind
 };

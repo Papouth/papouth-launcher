@@ -509,5 +509,7 @@
   "adm.act.promo.resume": 'เปิดใช้โค้ดส่วนลดอีกครั้ง',
   "adm.act.promo.delete": 'ลบโค้ดส่วนลด',
   'toast.readyShortcut': '{name} พร้อมแล้ว สร้างทางลัดบนเดสก์ท็อปแล้ว',
-  'card.shortcut': 'ติดตั้งแล้ว · มีทางลัดบนเดสก์ท็อป'
+  'card.shortcut': 'ติดตั้งแล้ว · มีทางลัดบนเดสก์ท็อป',
+  'act.open': 'เปิด',
+  'err.contents': 'เนื้อหา: {list}'
 };
