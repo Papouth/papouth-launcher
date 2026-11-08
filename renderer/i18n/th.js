@@ -41,6 +41,8 @@
   'sale.what': 'เกมนี้ทำอะไรได้บ้าง', 'sale.features': 'ฟีเจอร์', 'sale.how': 'วิธีการทำงาน',
   'sale.upsellTitle': 'เล่นได้ทุกเกมแบบเสียเงินด้วย Game Pass', 'sale.upsellText': 'เข้าถึงทุกเกมแบบเสียเงิน รวมอัปเดต เริ่มต้นเพียง {price}/เดือนเมื่อเลือกแพ็กเกจรายปี',
   'sale.passActive': 'Game Pass ใช้งานอยู่', 'sale.seePass': 'ดู Game Pass',
+  'tip.title': 'เคล็ดลับ', 'tip.forge': 'ยังไม่มีโอเวอร์เลย์? Overlay Forge ใช้ฟรี มีพรีเซ็ตสำหรับเกมใน Game Pass พร้อมใช้ หรือสร้างของคุณเองสำหรับเกมอื่น ๆ', 'tip.puls': 'ไม่มี TikFinity Premium? Pulsaaar ซอฟต์แวร์ฟรีของเรา เชื่อมของขวัญ TikTok เข้ากับเกมของคุณ พร้อมพรีเซ็ตสำหรับ Game Pass',
+  'tip.seeForge': 'ดู Overlay Forge', 'tip.seePuls': 'ดู Pulsaaar', 'tip.dismiss': 'ซ่อนเคล็ดลับนี้',
   'lib.title': 'คลังเกม', 'lib.sub': 'เกมและซอฟต์แวร์ที่คุณเข้าถึงได้', 'lib.empty': 'คลังเกมของคุณยังว่างอยู่', 'lib.discover': 'ไปที่ร้านค้า',
   'acc.title': 'บัญชี', 'acc.sub': 'ข้อมูลของคุณและการสมัครสมาชิก',
   'acc.email': 'อีเมล', 'acc.tiktok': '@TikTok', 'acc.pass': 'Game Pass', 'acc.active': 'ใช้งานอยู่ · {plan}', 'acc.inactive': 'ไม่ได้ใช้งาน',

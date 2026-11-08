@@ -421,3 +421,14 @@ html[lang="de"] .btn,html[lang="de"] .pay,html[lang="de"] .tabs button,html[lang
 .pmail2{font:700 15px/1.4 ui-monospace,Consolas,monospace;background:var(--surface-2);border:var(--bd);border-radius:8px;padding:6px 12px;overflow-wrap:anywhere;user-select:all}
 .linkbtn{color:var(--text);font-weight:700;opacity:1}
 .pcard2 .btn.primary{background:var(--lime);color:var(--on-bright)}
+
+.tip{margin-top:24px;padding:12px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:var(--text-muted);font-size:13.5px}
+.tip h2{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
+.tip p{margin:0 0 4px}.tip p:last-child{margin:0}
+.tip .link,.tips-lib .link{font-size:inherit;display:inline;white-space:nowrap}
+.tips-lib{display:flex;flex-direction:column;gap:6px;margin:0 0 18px}
+.tip-row{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:var(--text-muted);font-size:13px}
+.tip-tag{flex:none;font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
+.tip-msg{flex:1;min-width:0;overflow-wrap:anywhere}
+.tip-x{flex:none;width:26px;height:26px;border:0;border-radius:6px;background:none;color:var(--text-muted);font-size:18px;line-height:1;cursor:pointer}
+.tip-x:hover{background:var(--surface-2);color:var(--text)}

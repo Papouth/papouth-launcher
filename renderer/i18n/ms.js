@@ -41,6 +41,8 @@
   'sale.what': 'Apa yang permainan ini lakukan', 'sale.features': 'Ciri-ciri', 'sale.how': 'Cara ia berfungsi',
   'sale.upsellTitle': 'Semua permainan berbayar dengan Game Pass', 'sale.upsellText': 'Akses kepada semua permainan berbayar, termasuk kemas kini, bermula {price}/bulan dengan pelan tahunan.',
   'sale.passActive': 'Game Pass aktif', 'sale.seePass': 'Lihat Game Pass',
+  'tip.title': 'Petua', 'tip.forge': 'Tiada overlay? Overlay Forge percuma: preset sedia untuk permainan Game Pass, atau cipta sendiri untuk mana-mana permainan lain.', 'tip.puls': 'Tiada TikFinity Premium? Pulsaaar, perisian percuma kami, menghubungkan hadiah TikTok dengan permainan anda, dengan preset sedia untuk Game Pass.',
+  'tip.seeForge': 'Lihat Overlay Forge', 'tip.seePuls': 'Lihat Pulsaaar', 'tip.dismiss': 'Sembunyikan petua ini',
   'lib.title': 'Pustaka', 'lib.sub': 'Permainan dan perisian yang anda boleh akses.', 'lib.empty': 'Pustaka anda masih kosong.', 'lib.discover': 'Terokai kedai',
   'acc.title': 'Akaun', 'acc.sub': 'Maklumat dan langganan anda.',
   'acc.email': 'E-mel', 'acc.tiktok': '@TikTok', 'acc.pass': 'Game Pass', 'acc.active': 'Aktif · {plan}', 'acc.inactive': 'Tidak aktif',

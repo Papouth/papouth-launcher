@@ -17,6 +17,9 @@
   BASE.push({ slug: 'overlay-forge', name: 'Overlay Forge', kind: 'software', free: true, accent: '#19B38A', price: 0, version: '1.0.0', sizeMb: 60,
     tagline: L('Créez vos overlays TikTok LIVE, gratuitement.', 'Build your TikTok LIVE overlays, for free.', 'Crea tus overlays de TikTok LIVE, gratis.', 'สร้างโอเวอร์เลย์ TikTok LIVE ได้ฟรี', 'Cipta overlay TikTok LIVE anda, percuma.'),
     description: L('Un outil gratuit pour fabriquer des overlays de cadeaux et d\'actions pour vos jeux.', 'A free tool to build gift and action overlays for your games.', 'Una herramienta gratuita para crear overlays de regalos y acciones para tus juegos.', 'เครื่องมือฟรีสำหรับสร้างโอเวอร์เลย์ของขวัญและแอ็กชันสำหรับเกมของคุณ', 'Alat percuma untuk mencipta overlay hadiah dan tindakan untuk permainan anda.') });
+  BASE.push({ slug: 'pulsaaar', name: 'Pulsaaar', kind: 'software', free: true, accent: '#D9365E', price: 0, version: '1.0.0', sizeMb: 45,
+    tagline: L('Vos viewers déclenchent sons, alertes et touches en direct.', 'Your viewers trigger sounds, alerts and keys live.', 'Tus espectadores activan sonidos, alertas y teclas en directo.', 'ผู้ชมสั่งเสียง การแจ้งเตือน และปุ่มได้สด ๆ', 'Penonton anda mencetus bunyi, amaran dan kekunci secara langsung.'),
+    description: L('Un logiciel gratuit qui relie les cadeaux TikTok à vos jeux.', 'Free software that connects TikTok gifts to your games.', 'Un software gratuito que conecta los regalos de TikTok con tus juegos.', 'ซอฟต์แวร์ฟรีที่เชื่อมของขวัญ TikTok เข้ากับเกมของคุณ', 'Perisian percuma yang menghubungkan hadiah TikTok dengan permainan anda.') });
   const EXTRA = {
     needs: L('TikFinity (gratuit)', 'TikFinity (free)', 'TikFinity (gratis)', 'TikFinity (ฟรี)', 'TikFinity (percuma)'),
     features: [

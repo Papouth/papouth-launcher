@@ -373,6 +373,30 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     if (ev.key === 'ArrowRight') { ev.preventDefault(); moveMedia(g, 1); }
     else if (ev.key === 'ArrowLeft') { ev.preventDefault(); moveMedia(g, -1); }
   });
+  // ----- Astuces : outils gratuits (Overlay Forge, Pulsaaar) -----
+  const TIPS = [{ slug: 'overlay-forge', msg: 'tip.forge', btn: 'tip.seeForge' }, { slug: 'pulsaaar', msg: 'tip.puls', btn: 'tip.seePuls' }];
+  const TIP_KEY = 'papouth-tips-hidden';
+  const tipsHidden = () => { try { const l = JSON.parse(localStorage.getItem(TIP_KEY) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } };
+  function hideTip(slug) { try { localStorage.setItem(TIP_KEY, JSON.stringify([...new Set([...tipsHidden(), slug])])); } catch (e) { /* ignore */ } render(); }
+  function openTool(slug) {
+    if (S.games.some((x) => x.slug === slug)) return openSale(slug);
+    S.tab = 'store'; S.sale = null; S.filter = 'software'; render();
+  }
+  function tipLink(r) { return h('button', { class: 'link', type: 'button', onclick: () => openTool(r.slug) }, t(r.btn)); }
+  function toolTips(g) {
+    if (isFree(g) || isSoftware(g)) return null;
+    return h('aside', { class: 'tip' }, h('h2', {}, t('tip.title')), TIPS.map((r) => h('p', {}, t(r.msg) + ' ', tipLink(r))));
+  }
+  function libraryTips(mine) {
+    if (!mine.some((g) => !isFree(g) && !isSoftware(g))) return null;
+    const hid = tipsHidden();
+    const rows = TIPS.filter((r) => !S.installed[r.slug] && !hid.includes(r.slug));
+    if (!rows.length) return null;
+    return h('div', { class: 'tips-lib' }, rows.map((r) => h('div', { class: 'tip-row' },
+      h('span', { class: 'tip-tag' }, t('tip.title')), h('span', { class: 'tip-msg' }, t(r.msg) + ' ', tipLink(r)),
+      h('button', { class: 'tip-x', type: 'button', 'aria-label': t('tip.dismiss'), title: t('tip.dismiss'), onclick: () => hideTip(r.slug) }, '\u00d7'))));
+  }
+
   function saleView(g, opts) {
     opts = opts || {};
     const media = g.media || [];
@@ -409,6 +433,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
               row(t('sale.languages'), (g.languages || []).join(', ')))))),
       h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.what')), h('p', { class: 'desc' }, g.description)),
       (g.features || []).length ? h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.features')), h('ul', { class: 'feat' }, g.features.map((f) => h('li', {}, f)))) : null,
+      toolTips(g),
       (g.howItWorks || []).length ? h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.how')), h('ol', { class: 'steps' }, g.howItWorks.map((t, i) => h('li', {}, h('b', {}, String(i + 1)), h('span', {}, t))))) : null,
       isFree(g) ? null : h('section', { class: 'sale-sec upsell' }, h('div', {}, h('h2', { style: 'margin-top:0' }, t('sale.upsellTitle')), h('p', { class: 'sub', style: 'margin:0' }, t('sale.upsellText', { price: money(20) }))),
         passActive() ? h('span', { class: 'badge pass' }, t('sale.passActive')) : h('button', { class: 'btn primary', onclick: toPass }, t('sale.seePass'))));
@@ -417,7 +442,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   // ----- Bibliothèque -----
   function libraryView() {
     const mine = S.games.filter(inLibrary);
-    return h('div', {}, h('h1', {}, t('lib.title')), h('p', { class: 'sub' }, t('lib.sub')),
+    return h('div', {}, h('h1', {}, t('lib.title')), h('p', { class: 'sub' }, t('lib.sub')), libraryTips(mine),
       mine.length ? h('div', { class: 'grid' }, mine.map((g) => gameCard(g, 'library')))
         : h('div', { class: 'empty' }, t('lib.empty') + ' ', h('button', { class: 'link', onclick: () => { S.tab = 'store'; render(); } }, t('lib.discover'))));
   }

@@ -41,6 +41,8 @@
   'sale.what': 'Qué hace el juego', 'sale.features': 'Características', 'sale.how': 'Cómo funciona',
   'sale.upsellTitle': 'Todos los juegos de pago con el Game Pass', 'sale.upsellText': 'Acceso a todos los juegos de pago, con actualizaciones incluidas, desde {price}/mes con el plan anual.',
   'sale.passActive': 'Game Pass activo', 'sale.seePass': 'Ver el Game Pass',
+  'tip.title': 'Consejo', 'tip.forge': '¿Sin overlay? Overlay Forge es gratis: presets listos para los juegos del Game Pass, o crea el tuyo para cualquier otro juego.', 'tip.puls': '¿Sin TikFinity Premium? Pulsaaar, nuestro software gratuito, conecta los regalos de TikTok con tus juegos, con presets listos para el Game Pass.',
+  'tip.seeForge': 'Ver Overlay Forge', 'tip.seePuls': 'Ver Pulsaaar', 'tip.dismiss': 'Ocultar este consejo',
   'lib.title': 'Biblioteca', 'lib.sub': 'Los juegos y el software a los que tienes acceso.', 'lib.empty': 'Tu biblioteca está vacía.', 'lib.discover': 'Descubrir la tienda',
   'acc.title': 'Cuenta', 'acc.sub': 'Tus datos y tu suscripción.',
   'acc.email': 'Correo electrónico', 'acc.tiktok': '@TikTok', 'acc.pass': 'Game Pass', 'acc.active': 'Activo · {plan}', 'acc.inactive': 'Inactivo',
