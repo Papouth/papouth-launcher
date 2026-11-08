@@ -21,7 +21,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     installed: {}, running: new Set(), progress: {}, busy: new Set(), update: null, version: ''
   };
   if (S.tab === 'game') { S.sale = new URLSearchParams(location.search).get('slug'); S.tab = 'store'; }
-  if (!['store', 'library', 'account', 'admin'].includes(S.tab)) S.tab = 'store';
+  if (!['store', 'library', 'account', 'partners', 'admin'].includes(S.tab)) S.tab = 'store';
   const isAdminUser = () => !!(S.user && S.user.role === 'admin');
 
   // ---------- utilitaires ----------
@@ -108,7 +108,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
 
   // ---------- icônes ----------
   const svg = (d) => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); s.append(p); return s; };
-  const ICONS = { store: 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', library: 'M4 4h4v16H4zM10 4h4v16h-4zM16.5 5l3.5-1 3 15-3.5 1z', account: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6' };
+  const ICONS = { store: 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', library: 'M4 4h4v16H4zM10 4h4v16h-4zM16.5 5l3.5-1 3 15-3.5 1z', account: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6', partners: 'M9 11a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 7-5s7 2 7 5M17 11a2.5 2.5 0 100-5M18 15c2.5.4 4 2 4 5' };
 
   // ---------- rendu ----------
   function render() {
@@ -122,7 +122,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     return h('div', { class: 'shell' },
       h('aside', { class: 'side' },
         h('div', { class: 'logo brand' }, h('i'), h('span', { class: 'bname' }, h('b', {}, 'Papouth'), h('small', {}, t('brand.sub')))),
-        h('nav', { class: 'nav' }, nav('store', t('nav.store')), nav('library', t('nav.library')), nav('account', t('nav.account')),
+        h('nav', { class: 'nav' }, nav('store', t('nav.store')), nav('library', t('nav.library')), nav('account', t('nav.account')), nav('partners', t('par.nav')),
           adm ? [h('div', { class: 'navsec' }, t('adm.section')), ...adm.nav().map((n) => h('button', { class: n.on ? 'on' : '', 'data-admin-tab': n.id, onclick: n.go }, n.icon, n.label))] : null),
         h('div', { class: 'foot' }, 'v' + (S.version || '1.0.0') + (S.demo ? t('foot.demo') : ''))),
       h('header', { class: 'top' },
@@ -133,7 +133,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
         S.update ? updateBadge() : null,
         h('span', { class: 'who' }, t('top.who') + ' ', h('b', {}, '@' + (S.user.tiktok || '?'))),
         h('span', { class: 'badge ' + (passActive() ? 'pass' : '') }, passActive() ? t('pass.badge', { plan: planLabel(p.plan) }) : t('pass.none'))),
-      h('main', { class: 'main' }, S.tab === 'admin' && adm ? adm.view() : S.sale && S.games.some((g) => g.slug === S.sale) ? saleView(S.games.find((g) => g.slug === S.sale)) : S.tab === 'store' ? storeView() : S.tab === 'library' ? libraryView() : accountView()));
+      h('main', { class: 'main' }, S.tab === 'admin' && adm ? adm.view() : S.sale && S.games.some((g) => g.slug === S.sale) ? saleView(S.games.find((g) => g.slug === S.sale)) : S.tab === 'store' ? storeView() : S.tab === 'library' ? libraryView() : S.tab === 'partners' ? partnersView() : accountView()));
   }
 
   // Mode administrateur : module chargé par admin.js, actif seulement pour un compte au rôle « admin »
@@ -420,6 +420,26 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     return h('div', {}, h('h1', {}, t('lib.title')), h('p', { class: 'sub' }, t('lib.sub')),
       mine.length ? h('div', { class: 'grid' }, mine.map((g) => gameCard(g, 'library')))
         : h('div', { class: 'empty' }, t('lib.empty') + ' ', h('button', { class: 'link', onclick: () => { S.tab = 'store'; render(); } }, t('lib.discover'))));
+  }
+
+  // ----- Partenariats -----
+  const PAR_MAIL = 'louisdupasdev@gmail.com', PAR_DISCORD = 'https://discord.gg/zWvFk4FkPd';
+  const parMailto = (kind) => 'mailto:' + PAR_MAIL + '?subject=' + encodeURIComponent(t('par.subj_' + kind)) + '&body=' + encodeURIComponent(t('par.body_' + kind)).replace(/%0A/g, '%0D%0A');
+  async function copyMail(btn) {
+    try { await navigator.clipboard.writeText(PAR_MAIL); } catch (_) { try { const ta = h('textarea', { readonly: true }); ta.value = PAR_MAIL; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); } catch (__) { /* sélection manuelle possible */ } }
+    toast(t('par.copied'));
+  }
+  function partnersView() {
+    const card = (k) => h('article', { class: 'panel pcard2' }, h('h2', {}, t('par.' + k + '_t')), h('p', {}, t('par.' + k + '_d')),
+      h('ul', { class: 'plist' }, h('li', {}, t('par.' + k + '_b1')), h('li', {}, t('par.' + k + '_b2'))),
+      h('a', { class: 'btn primary', href: parMailto(k === 's' ? 's' : 'a'), target: '_blank', rel: 'noopener' }, t('par.write')));
+    const step = (n) => h('li', {}, h('b', {}, t('par.h' + n + '_t')), h('span', {}, t('par.h' + n + '_d')));
+    return h('div', { class: 'partners' }, h('h1', {}, t('par.title')), h('p', { class: 'sub' }, t('par.intro')),
+      h('div', { class: 'pgrid2' }, card('s'), card('a')),
+      h('h2', {}, t('par.how')), h('ol', { class: 'psteps' }, step(1), step(2), step(3)), h('p', { class: 'sub' }, t('par.flex')),
+      h('div', { class: 'panel wide pcontact2' }, h('h2', {}, t('par.contact_t')), h('p', { class: 'sub' }, t('par.contact_d')),
+        h('div', { class: 'row' }, h('code', { class: 'pmail2' }, PAR_MAIL), h('button', { class: 'btn sm', type: 'button', onclick: (ev) => copyMail(ev.currentTarget) }, t('par.copy'))),
+        h('a', { class: 'linkbtn', href: PAR_DISCORD, target: '_blank', rel: 'noopener' }, t('par.discord'))));
   }
 
   // ----- Compte -----

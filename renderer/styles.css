@@ -403,3 +403,21 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow-wrap:an
 /* Allemand : mots composés longs, retour à la ligne plutôt que débordement */
 html[lang="de"] body{overflow-wrap:break-word;hyphens:auto}
 html[lang="de"] .btn,html[lang="de"] .pay,html[lang="de"] .tabs button,html[lang="de"] .nav button{hyphens:manual}
+
+/* Partenariats */
+.partners{max-width:980px}
+.pgrid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:22px}
+.panel.pcard2{max-width:none;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.pcard2 h2{margin:0}.pcard2 p{margin:0;color:var(--text-muted)}
+.plist{margin:0 0 8px;padding-left:20px;display:grid;gap:6px}
+.pcard2 .btn{margin-top:auto;text-decoration:none}
+.btn.primary{display:inline-block}
+.psteps{list-style:none;margin:0 0 14px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px;counter-reset:ps}
+.psteps li{display:flex;flex-direction:column;gap:4px;padding:16px;background:var(--surface);border:var(--bd);border-radius:var(--r);box-shadow:var(--sh);counter-increment:ps}
+.psteps li::before{content:counter(ps);display:grid;place-items:center;width:32px;height:32px;border-radius:99px;border:var(--bd);background:var(--yellow);color:var(--on-bright);font-weight:900;margin-bottom:6px}
+.psteps span{color:var(--text-muted);overflow-wrap:anywhere}
+.pcontact2{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.pcontact2 h2{margin:0}.pcontact2 .sub{margin:0}
+.pmail2{font:700 15px/1.4 ui-monospace,Consolas,monospace;background:var(--surface-2);border:var(--bd);border-radius:8px;padding:6px 12px;overflow-wrap:anywhere;user-select:all}
+.linkbtn{color:var(--text);font-weight:700;opacity:1}
+.pcard2 .btn.primary{background:var(--lime);color:var(--on-bright)}
