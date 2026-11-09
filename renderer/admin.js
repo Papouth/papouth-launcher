@@ -826,6 +826,33 @@
       M.resetArmed = false;
       try { await adm('POST', '/admin/stats/reset'); toast(t('adm.stats.resetDone')); await load('stats'); } catch (e) { toast(errText(e), 'error'); keepScroll(render); }
     }
+    // Détail des revenus : mêmes lignes que le chiffre de la carte (GET /admin/stats/revenue-lines), lecture seule
+    const revTile = (label, value, sub, scope) => h('div', { class: 'stat', 'data-rev': scope }, h('small', {}, label), h('b', {}, money(value)), h('small', { class: 'stat-sub' }, sub),
+      h('button', { class: 'btn ghost sm', type: 'button', 'data-rev-detail': scope, onclick: () => showRevenueLines(scope) }, t('adm.rev.detail')));
+    const revType = (v) => { const k = { 'Achat jeu': 'tGame', 'Renouvellement': 'tRenew', 'Rattrapage': 'tCatch', 'Remboursement': 'tRefund', 'Game Pass annuel': 'tYearly', 'Game Pass mensuel': 'tMonthly', 'Game Pass': 'tPass' }[v]; return k ? t('adm.rev.' + k) : (v || '—'); };
+    async function showRevenueLines(scope) {
+      const title = scope === 'month' ? t('adm.stats.revenue') : t('adm.stats.revenueTotal');
+      const ov = modal(title, h('div', { class: 'empty' }, t('adm.loading')), [h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, t('adm.rev.close'))]);
+      ov.firstChild.classList.add('wide');
+      let r;
+      try { r = await adm('GET', '/admin/stats/revenue-lines?scope=' + scope); } catch (e) { const b = ov.querySelector('.empty'); if (b) b.textContent = errText(e); return; }
+      if (!document.getElementById('modal')) return;
+      const dt = (iso) => new Date(iso).toLocaleString(window.I18N.lang(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const rows = r.lines.map((l) => {
+        const who = l.player ? [l.player.email, l.player.tiktok ? '@' + l.player.tiktok : null].filter(Boolean).join(' · ') : t('adm.rev.unknown');
+        const prod = l.product && l.product !== l.type ? revType(l.product) : '—';
+        const flag = l.suspect ? h('div', { class: 'rev-flag', title: [l.suspectReason, ...(l.suspectWith || [])].filter(Boolean).join(' · ') }, t('adm.rev.suspect')) : null;
+        return h('tr', { class: l.suspect ? 'suspect' : '', 'data-ref': l.ref }, h('td', {}, dt(l.at), flag), h('td', {}, who), h('td', {}, revType(l.type)), h('td', {}, prod), h('td', {}, l.provider || '—'), h('td', { class: 'num' + (l.amountCents < 0 ? ' neg' : '') }, money(l.amountEur)));
+      });
+      const since = r.from && new Date(r.from).getTime() > 0 ? t('adm.rev.since', { date: fmtDate(r.from) }) : t('adm.rev.sinceAll');
+      const body = h('div', { class: 'stack' },
+        h('small', {}, [t('adm.rev.count', { count: r.count }), since, r.suspectCount ? t('adm.rev.suspectN', { count: r.suspectCount }) : null].filter(Boolean).join(' · ') + '. ' + t('adm.rev.readonly')),
+        r.lines.length
+          ? h('div', { class: 'rev-scroll' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['date', 'player', 'type', 'product', 'provider', 'amount'].map((c) => h('th', { class: c === 'amount' ? 'num' : '' }, t('adm.rev.' + c))))), h('tbody', {}, rows)))
+          : h('div', { class: 'empty' }, t('adm.rev.empty')),
+        h('div', { class: 'row rev-total', id: 'rev-total' }, h('b', {}, t('adm.rev.total')), h('b', {}, money(r.totalEur))));
+      ov.firstChild.replaceChild(body, ov.querySelector('.empty') || ov.firstChild.children[1]);
+    }
     function statsView() {
       const s = M.stats;
       const tile = (label, value) => h('div', { class: 'stat' }, h('small', {}, label), h('b', {}, value));
@@ -841,8 +868,9 @@
           h('div', { class: 'row statusrow' }, h('small', { id: 'stats-since' }, s.statsSince ? t('adm.stats.since', { date: fmtDate(s.statsSince) }) : t('adm.stats.sinceAll')), resetBtn),
           M.resetArmed ? h('small', { id: 'stats-reset-hint' }, t('adm.stats.resetHint')) : null,
           h('div', { class: 'stats' }, tile(t('adm.stats.users'), num(s.users)), tile(t('adm.stats.passes'), num((s.passesTotal != null ? s.passesTotal : s.activePasses.monthly + s.activePasses.yearly))),
-            tile(t('adm.stats.monthly'), num(s.activePasses.monthly)), tile(t('adm.stats.yearly'), num(s.activePasses.yearly)), tile(t('adm.stats.revenue'), money(s.revenueMonthEur)),
-            s.revenueTotalEur != null ? tile(t('adm.stats.revenueTotal'), money(s.revenueTotalEur)) : null,
+            tile(t('adm.stats.monthly'), num(s.activePasses.monthly)), tile(t('adm.stats.yearly'), num(s.activePasses.yearly)),
+            revTile(t('adm.stats.revenue'), s.revenueMonthEur, t('adm.rev.monthSub'), 'month'),
+            s.revenueTotalEur != null ? revTile(t('adm.stats.revenueTotal'), s.revenueTotalEur, s.statsSince ? t('adm.rev.periodSub', { date: fmtDate(s.statsSince) }) : t('adm.rev.periodSubAll'), 'period') : null,
             s.gifts ? tile(t('adm.stats.granted'), num((s.gifts.games || 0) + (s.gifts.passes || 0))) : null),
           h('h2', {}, t('adm.stats.perGame')),
           h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, [t('adm.f.name'), t('adm.status'), t('adm.f.price'), t('adm.stats.sales'), t('adm.stats.granted'), t('adm.stats.downloads')].map((c) => h('th', {}, c)))),

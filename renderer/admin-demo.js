@@ -286,6 +286,22 @@
             games: sorted().map((g) => (g.free ? { slug: g.slug, name: g.name, status: g.status, kind: g.kind, free: true, priceCents: 0, downloads: on ? 42 : 0 } : { slug: g.slug, name: g.name, status: g.status, kind: g.kind, free: false, priceCents: g.priceCents, sales: sales[g.slug], granted: gifted[g.slug] }))
           };
         }
+        case 'GET stats :slug': {
+          if (seg[1] !== 'revenue-lines') break;
+          const scope = u.searchParams.get('scope');
+          if (scope !== 'month' && scope !== 'period') throw err('invalid_scope', 'scope doit valoir month ou period.');
+          // Démo : une ligne par Game Pass mensuel (30 €) et par achat de jeu (40 €), donc total = carte ; la première ligne est marquée « à vérifier »
+          const pool = users.filter((x) => x.role !== 'admin' && !x.isTest);
+          const lines = [];
+          if (!statsSince) {
+            pool.filter((x) => x.pass.active && x.pass.plan === 'monthly').forEach((x) => lines.push({ amountCents: 3000, type: 'Game Pass mensuel', product: 'Game Pass mensuel', user: x }));
+            games.forEach((gm) => users.filter((x) => x.owned.includes(gm.slug) && (x.origins || {})[gm.slug] !== 'admin').forEach((x) => lines.push({ amountCents: 4000, type: 'Achat jeu', product: gm.name, user: x })));
+          }
+          const mask = (e) => { const [a, d] = String(e).split('@'); return (a || '').slice(0, 2) + '***@' + (d || ''); };
+          const out = lines.map((l, i) => ({ at: new Date(Date.now() - (i * 1.7 + 0.4) * 3600000).toISOString(), amountCents: l.amountCents, amountEur: l.amountCents / 100, type: l.type, product: l.product, provider: i % 3 === 2 ? 'PayPal' : 'Stripe', ref: 'demo:' + (i + 1), player: { email: mask(l.user.email), tiktok: l.user.tiktok || null }, suspect: i === 0 && lines.length > 1, suspectWith: i === 0 ? ['demo:pay-' + lines.length] : [], suspectReason: i === 0 ? 'même paiement sous deux identifiants ?' : null }));
+          const totalCents = out.reduce((a, l) => a + l.amountCents, 0);
+          return { scope, from: statsSince || new Date(0).toISOString(), totalCents, totalEur: totalCents / 100, count: out.length, suspectCount: out.filter((l) => l.suspect).length, lines: out };
+        }
         case 'POST stats :slug': {
           if (seg[1] !== 'reset') break;
           statsSince = new Date().toISOString(); audit('stats.reset', null, statsSince);
