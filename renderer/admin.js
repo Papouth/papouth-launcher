@@ -829,7 +829,7 @@
     // Détail des revenus : mêmes lignes que le chiffre de la carte (GET /admin/stats/revenue-lines), lecture seule
     const revTile = (label, value, sub, scope) => h('div', { class: 'stat', 'data-rev': scope }, h('small', {}, label), h('b', {}, money(value)), h('small', { class: 'stat-sub' }, sub),
       h('button', { class: 'btn ghost sm', type: 'button', 'data-rev-detail': scope, onclick: () => showRevenueLines(scope) }, t('adm.rev.detail')));
-    const revType = (v) => { const k = { 'Achat jeu': 'tGame', 'Renouvellement': 'tRenew', 'Rattrapage': 'tCatch', 'Remboursement': 'tRefund', 'Game Pass annuel': 'tYearly', 'Game Pass mensuel': 'tMonthly', 'Game Pass': 'tPass' }[v]; return k ? t('adm.rev.' + k) : (v || '—'); };
+    const revType = (v) => { const k = { 'Achat jeu': 'tGame', 'Renouvellement': 'tRenew', 'Rattrapage': 'tCatch', 'Remboursement': 'tRefund', 'Game Pass annuel': 'tYearly', 'Game Pass mensuel': 'tMonthly', 'Game Pass': 'tPass', 'Ancien Game Pass': 'tLegacy' }[v]; return k ? t('adm.rev.' + k) : (v || '—'); };
     async function showRevenueLines(scope) {
       const title = scope === 'month' ? t('adm.stats.revenue') : t('adm.stats.revenueTotal');
       const ov = modal(title, h('div', { class: 'empty' }, t('adm.loading')), [h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, t('adm.rev.close'))]);
@@ -841,12 +841,12 @@
       const rows = r.lines.map((l) => {
         const who = l.player ? [l.player.email, l.player.tiktok ? '@' + l.player.tiktok : null].filter(Boolean).join(' · ') : t('adm.rev.unknown');
         const prod = l.product && l.product !== l.type ? revType(l.product) : '—';
-        const flag = l.suspect ? h('div', { class: 'rev-flag', title: [l.suspectReason, ...(l.suspectWith || [])].filter(Boolean).join(' · ') }, t('adm.rev.suspect')) : null;
-        return h('tr', { class: l.suspect ? 'suspect' : '', 'data-ref': l.ref }, h('td', {}, dt(l.at), flag), h('td', {}, who), h('td', {}, revType(l.type)), h('td', {}, prod), h('td', {}, l.provider || '—'), h('td', { class: 'num' + (l.amountCents < 0 ? ' neg' : '') }, money(l.amountEur)));
+        const flag = l.excluded ? h('div', { class: 'rev-flag' }, t('adm.rev.notCounted')) : l.suspect ? h('div', { class: 'rev-flag', title: [l.suspectReason, ...(l.suspectWith || [])].filter(Boolean).join(' · ') }, t('adm.rev.suspect')) : null;
+        return h('tr', { class: l.excluded ? 'excluded' : (l.suspect ? 'suspect' : ''), 'data-ref': l.ref }, h('td', {}, dt(l.at), flag), h('td', {}, who), h('td', {}, revType(l.type)), h('td', {}, prod), h('td', {}, l.provider || '—'), h('td', { class: 'num' + (l.amountCents < 0 ? ' neg' : '') }, money(l.amountEur)));
       });
       const since = r.from && new Date(r.from).getTime() > 0 ? t('adm.rev.since', { date: fmtDate(r.from) }) : t('adm.rev.sinceAll');
       const body = h('div', { class: 'stack' },
-        h('small', {}, [t('adm.rev.count', { count: r.count }), since, r.suspectCount ? t('adm.rev.suspectN', { count: r.suspectCount }) : null].filter(Boolean).join(' · ') + '. ' + t('adm.rev.readonly')),
+        h('small', {}, [t('adm.rev.count', { count: r.count }), since, r.suspectCount ? t('adm.rev.suspectN', { count: r.suspectCount }) : null, r.excludedCount ? t('adm.rev.excludedN', { count: r.excludedCount }) : null].filter(Boolean).join(' · ') + '. ' + t('adm.rev.readonly')),
         r.lines.length
           ? h('div', { class: 'rev-scroll' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['date', 'player', 'type', 'product', 'provider', 'amount'].map((c) => h('th', { class: c === 'amount' ? 'num' : '' }, t('adm.rev.' + c))))), h('tbody', {}, rows)))
           : h('div', { class: 'empty' }, t('adm.rev.empty')),
