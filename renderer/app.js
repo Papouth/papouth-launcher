@@ -253,7 +253,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       actions.append(progBlock(g, prog));
     } else if (state === 'locked') {
       actions.append(
-        h('button', { class: 'btn primary', onclick: () => payModal({ product: 'game', slug: g.slug, title: t('card.buyTitle', { name: g.name }), price: money(g.price || 40) }) }, t('card.buy', { price: money(g.price || 40) })),
+        h('button', { class: 'btn primary', onclick: () => payModal({ product: 'game', slug: g.slug, title: t('card.buyTitle', { name: g.name }), price: money(g.price || 20) }) }, t('card.buy', { price: money(g.price || 20) })),
         h('button', { class: 'link', onclick: () => { toPass(); } }, t('card.inPass')));
     } else if (state === 'install' && g.available === false) actions.append(h('button', { class: 'btn', disabled: true }, t('act.soon')));
     else if (state === 'install' && isFree(g) && !S.obtained.includes(g.slug)) actions.append(h('button', { class: 'btn primary', 'data-obtain': g.slug, onclick: () => obtain(g) }, t('act.get')));
@@ -299,7 +299,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
     const meta = isFree(g)
       ? h('div', { class: 'price-big' }, t('price.free'), h('small', {}, t('sale.freeNote')))
       : state === 'locked'
-        ? h('div', { class: 'price-big' }, money(g.price || 40), h('small', {}, t('sale.once')))
+        ? h('div', { class: 'price-big' }, money(g.price || 20), h('small', {}, t('sale.once')))
         : h('div', { class: 'spot-state' }, h('span', { class: 'badge' }, isOwned(g) ? t('tag.lifetime') : t('tag.pass')));
     const actions = actionsFor(g, 'store');
     actions.append(h('button', { class: 'btn ghost sm spot-view', type: 'button', onclick: () => openSale(g.slug) }, t('feat.view')));
@@ -316,6 +316,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
   // ----- Boutique -----
   function storeView() {
     const shown = S.games.filter(matchFilter);
+    const passCount = S.games.filter((g) => !isFree(g) && g.inPass !== false).length; // jeux payants inclus dans le Game Pass
     const plan = (id, name, price, unit, note, best) => h('div', { class: 'plan' + (best ? ' best' : '') },
       best ? h('span', { class: 'badge best' }, t('store.best')) : null,
       h('div', { class: 'name' }, name), h('div', { class: 'price' }, price, h('small', {}, unit)),
@@ -325,9 +326,10 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       featuredBanner(),
       h('section', { class: 'hero' },
         h('h1', {}, t('store.passTitle')), h('p', { class: 'sub' }, t('store.passSub')),
+        passCount ? h('p', { class: 'sub' }, t(passCount === 1 ? 'store.passCountOne' : 'store.passCountN', { n: passCount })) : null,
         h('div', { class: 'plans' },
-          plan('pass_monthly', t('plan.monthly'), money(30), t('store.perMonth'), t('store.noCommit'), false),
-          plan('pass_yearly', t('plan.yearly'), money(240), t('store.perYear'), t('store.yearNote', { price: money(20) }), true))),
+          plan('pass_monthly', t('plan.monthly'), money(12.99), t('store.perMonth'), t('store.noCommit'), false),
+          plan('pass_yearly', t('plan.yearly'), money(99), t('store.perYear'), t('store.yearNote', { price: money(8.25) }), true))),
       h('div', { class: 'row cathead' }, h('h2', {}, t('store.catalog')), S.games.length ? filterBar() : null),
       !S.games.length ? h('div', { class: 'empty' }, t('store.none'))
         : shown.length ? h('div', { class: 'grid' }, shown.map((g) => gameCard(g, 'store'))) : h('div', { class: 'empty' }, t('store.noneFiltered')));
@@ -424,7 +426,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
             h('div', { class: 'row' }, h('h1', {}, g.name), h('span', { class: 'badge' }, badge), isSoftware(g) ? h('span', { class: 'badge kind-inline' }, t('tag.software')) : null),
             h('p', { class: 'sub' }, g.tagline),
             isFree(g) ? h('div', { class: 'price-big' }, t('price.free'), h('small', {}, t('sale.freeNote')))
-              : h('div', { class: 'price-big' }, isOwned(g) ? t('sale.owned') : money(g.price || 40), isOwned(g) ? null : h('small', {}, t('sale.once'))),
+              : h('div', { class: 'price-big' }, isOwned(g) ? t('sale.owned') : money(g.price || 20), isOwned(g) ? null : h('small', {}, t('sale.once'))),
             opts.preview ? h('div', { class: 'actions' }, h('button', { class: 'btn primary', type: 'button', disabled: true }, isFree(g) ? t('act.get') : t('card.buy', { price: money(g.price || 0) }))) : actionsFor(g, 'store'),
             h('dl', { class: 'kv sm' },
               row(t('sale.version'), 'v' + g.version + (inst ? ' · ' + t('card.installed', { version: inst.version }) : '')),
@@ -435,7 +437,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
       (g.features || []).length ? h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.features')), h('ul', { class: 'feat' }, g.features.map((f) => h('li', {}, f)))) : null,
       toolTips(g),
       (g.howItWorks || []).length ? h('section', { class: 'sale-sec' }, h('h2', {}, t('sale.how')), h('ol', { class: 'steps' }, g.howItWorks.map((t, i) => h('li', {}, h('b', {}, String(i + 1)), h('span', {}, t))))) : null,
-      isFree(g) ? null : h('section', { class: 'sale-sec upsell' }, h('div', {}, h('h2', { style: 'margin-top:0' }, t('sale.upsellTitle')), h('p', { class: 'sub', style: 'margin:0' }, t('sale.upsellText', { price: money(20) }))),
+      isFree(g) ? null : h('section', { class: 'sale-sec upsell' }, h('div', {}, h('h2', { style: 'margin-top:0' }, t('sale.upsellTitle')), h('p', { class: 'sub', style: 'margin:0' }, t('sale.upsellText', { price: money(8.25) }))),
         passActive() ? h('span', { class: 'badge pass' }, t('sale.passActive')) : h('button', { class: 'btn primary', onclick: toPass }, t('sale.seePass'))));
   }
 

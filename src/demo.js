@@ -2,13 +2,13 @@
 // Données factices pour le mode démo (sans backend), localisées { fr, en, es, th, ms, de } (de ajouté plus bas ; repli fr).
 const L = (fr, en, es, th, ms, de) => (de === undefined ? { fr, en, es, th, ms } : { fr, en, es, th, ms, de });
 const BASE = [
-  { slug: 'paintball-master', name: 'Paintball Master', accent: '#FF3D7F', price: 40, version: '1.2.0', sizeMb: 180,
+  { slug: 'paintball-master', name: 'Paintball Master', accent: '#FF3D7F', price: 20, version: '1.2.0', sizeMb: 180,
     tagline: L('Vos viewers repeignent l\'écran à coups de cadeaux.', 'Your viewers repaint the screen, gift after gift.', 'Tus espectadores repintan la pantalla a golpe de regalos.', 'ผู้ชมสาดสีทั่วหน้าจอด้วยของขวัญ', 'Penonton anda mengecat semula skrin dengan hadiah.'),
     description: L('Un jeu de peinture interactif pour TikTok LIVE.', 'An interactive paint game for TikTok LIVE.', 'Un juego de pintura interactivo para TikTok LIVE.', 'เกมสาดสีแบบอินเตอร์แอคทีฟสำหรับ TikTok LIVE', 'Permainan cat interaktif untuk TikTok LIVE.') },
-  { slug: 'pop-riot', name: 'Pop Riot', accent: '#FFC400', price: 40, version: '1.0.3', sizeMb: 120,
+  { slug: 'pop-riot', name: 'Pop Riot', accent: '#FFC400', price: 20, version: '1.0.3', sizeMb: 120,
     tagline: L('Des ballons à faire éclater en direct.', 'Balloons to pop live.', 'Globos para reventar en directo.', 'ลูกโป่งให้ยิงแตกสด ๆ', 'Belon untuk dipecahkan secara langsung.'),
     description: L('Chaque cadeau lance une vague de ballons.', 'Every gift launches a wave of balloons.', 'Cada regalo lanza una oleada de globos.', 'ของขวัญทุกชิ้นปล่อยลูกโป่งออกมาเป็นระลอก', 'Setiap hadiah melancarkan gelombang belon.') },
-  { slug: 'boys-girls-ultimate', name: 'Boys&Girls Ultimate', accent: '#2E6BFF', price: 40, version: '2.0.0', sizeMb: 210,
+  { slug: 'boys-girls-ultimate', name: 'Boys&Girls Ultimate', accent: '#2E6BFF', price: 20, version: '2.0.0', sizeMb: 210,
     tagline: L('Garçons contre filles, le chat décide.', 'Boys vs girls, the chat decides.', 'Chicos contra chicas, el chat decide.', 'ชายปะทะหญิง แชตเป็นผู้ตัดสิน', 'Lelaki lawan perempuan, sembang yang menentukan.'),
     description: L('Plusieurs modes de duel entre les deux camps.', 'Several duel modes between the two sides.', 'Varios modos de duelo entre los dos bandos.', 'หลายโหมดดวลกันระหว่างสองฝ่าย', 'Beberapa mod duel antara kedua-dua pihak.') }
 ];

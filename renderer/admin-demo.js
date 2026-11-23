@@ -144,7 +144,7 @@
           if (slug.length < 2 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) throw err('invalid_slug', 'Identifiant invalide : 2 à 40 caractères, minuscules, chiffres et tirets.');
           if (games.some((g) => g.slug === slug)) throw err('slug_taken', 'Un jeu utilise déjà cet identifiant.');
           const g = {
-            slug, name, kind: 'game', free: false, accent: '#8a8f98', priceCents: 4000, version: '1.0.0', sizeMb: 0, status: 'draft', sortOrder: games.length,
+            slug, name, kind: 'game', free: false, accent: '#8a8f98', priceCents: 2000, version: '1.0.0', sizeMb: 0, status: 'draft', sortOrder: games.length,
             i18n: Object.fromEntries(langs.map((l) => [l, { tagline: '', description: '', features: [], howItWorks: [] }])),
             languages: ['Français', 'English', 'Español', 'ไทย', 'Bahasa Melayu', 'Deutsch'], requirements: { os: 'Windows 10/11', needs: {} }, coverUrl: '', coverPath: '', media: [],
             download: { mode: 'upload', exe: name.replace(/[^A-Za-z0-9]/g, '') + '.exe', hasBuild: false }, stripeProductId: null, stripePriceId: null, createdAt: now(), updatedAt: now()
@@ -277,7 +277,7 @@
           const pool = users.filter((x) => x.role !== 'admin' && !x.isTest);
           const sales = Object.fromEntries(games.map((g) => [g.slug, on ? users.filter((x) => x.owned.includes(g.slug) && (x.origins || {})[g.slug] !== 'admin').length : 0]));
           const plan = (p) => (on ? pool.filter((x) => x.pass.active && x.pass.plan === p).length : 0);
-          const revenue = 30 * plan('monthly') + 40 * Object.values(sales).reduce((a, c) => a + c, 0);
+          const revenue = Math.round((12.99 * plan('monthly') + 20 * Object.values(sales).reduce((a, c) => a + c, 0)) * 100) / 100;
           const gifted = Object.fromEntries(games.map((g) => [g.slug, on ? users.filter((x) => (x.origins || {})[g.slug] === 'admin').length : 0]));
           return {
             users: on ? pool.length : 0, activePasses: { monthly: plan('monthly'), yearly: plan('yearly') }, passesTotal: plan('monthly') + plan('yearly'), giftedPasses: 0,
@@ -290,12 +290,12 @@
           if (seg[1] !== 'revenue-lines') break;
           const scope = u.searchParams.get('scope');
           if (scope !== 'month' && scope !== 'period') throw err('invalid_scope', 'scope doit valoir month ou period.');
-          // Démo : une ligne par Game Pass mensuel (30 €) et par achat de jeu (40 €), donc total = carte ; la première ligne est marquée « à vérifier »
+          // Démo : une ligne par Game Pass mensuel (12,99 €) et par achat de jeu (20 €), donc total = carte ; la première ligne est marquée « à vérifier »
           const pool = users.filter((x) => x.role !== 'admin' && !x.isTest);
           const lines = [];
           if (!statsSince) {
-            pool.filter((x) => x.pass.active && x.pass.plan === 'monthly').forEach((x) => lines.push({ amountCents: 3000, type: 'Game Pass mensuel', product: 'Game Pass mensuel', user: x }));
-            games.forEach((gm) => users.filter((x) => x.owned.includes(gm.slug) && (x.origins || {})[gm.slug] !== 'admin').forEach((x) => lines.push({ amountCents: 4000, type: 'Achat jeu', product: gm.name, user: x })));
+            pool.filter((x) => x.pass.active && x.pass.plan === 'monthly').forEach((x) => lines.push({ amountCents: 1299, type: 'Game Pass mensuel', product: 'Game Pass mensuel', user: x }));
+            games.forEach((gm) => users.filter((x) => x.owned.includes(gm.slug) && (x.origins || {})[gm.slug] !== 'admin').forEach((x) => lines.push({ amountCents: 2000, type: 'Achat jeu', product: gm.name, user: x })));
           }
           const mask = (e) => { const [a, d] = String(e).split('@'); return (a || '').slice(0, 2) + '***@' + (d || ''); };
           const out = lines.map((l, i) => ({ at: new Date(Date.now() - (i * 1.7 + 0.4) * 3600000).toISOString(), amountCents: l.amountCents, amountEur: l.amountCents / 100, type: l.type, product: l.product, provider: i % 3 === 2 ? 'PayPal' : 'Stripe', ref: 'demo:' + (i + 1), player: { email: mask(l.user.email), tiktok: l.user.tiktok || null }, suspect: i === 0 && lines.length > 1, suspectWith: i === 0 ? ['demo:pay-' + lines.length] : [], suspectReason: i === 0 ? 'même paiement sous deux identifiants ?' : null }));

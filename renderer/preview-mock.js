@@ -4,13 +4,13 @@
   const q = new URLSearchParams(location.search);
   const L = (fr, en, es, th, ms) => ({ fr, en, es, th, ms });
   const BASE = [
-    { slug: 'paintball-master', name: 'Paintball Master', accent: '#FF3D7F', price: 40, version: '1.2.0', sizeMb: 180,
+    { slug: 'paintball-master', name: 'Paintball Master', accent: '#FF3D7F', price: 20, version: '1.2.0', sizeMb: 180,
       tagline: L('Vos viewers repeignent l\'écran à coups de cadeaux.', 'Your viewers repaint the screen, gift after gift.', 'Tus espectadores repintan la pantalla a golpe de regalos.', 'ผู้ชมสาดสีทั่วหน้าจอด้วยของขวัญ', 'Penonton anda mengecat semula skrin dengan hadiah.'),
       description: L('Un jeu de peinture interactif pour TikTok LIVE.', 'An interactive paint game for TikTok LIVE.', 'Un juego de pintura interactivo para TikTok LIVE.', 'เกมสาดสีแบบอินเตอร์แอคทีฟสำหรับ TikTok LIVE', 'Permainan cat interaktif untuk TikTok LIVE.') },
-    { slug: 'pop-riot', name: 'Pop Riot', accent: '#FFC400', price: 40, version: '1.0.3', sizeMb: 120,
+    { slug: 'pop-riot', name: 'Pop Riot', accent: '#FFC400', price: 20, version: '1.0.3', sizeMb: 120,
       tagline: L('Des ballons à faire éclater en direct.', 'Balloons to pop live.', 'Globos para reventar en directo.', 'ลูกโป่งให้ยิงแตกสด ๆ', 'Belon untuk dipecahkan secara langsung.'),
       description: L('Chaque cadeau lance une vague de ballons.', 'Every gift launches a wave of balloons.', 'Cada regalo lanza una oleada de globos.', 'ของขวัญทุกชิ้นปล่อยลูกโป่งออกมาเป็นระลอก', 'Setiap hadiah melancarkan gelombang belon.') },
-    { slug: 'boys-girls-ultimate', name: 'Boys&Girls Ultimate', accent: '#2E6BFF', price: 40, version: '2.0.0', sizeMb: 210,
+    { slug: 'boys-girls-ultimate', name: 'Boys&Girls Ultimate', accent: '#2E6BFF', price: 20, version: '2.0.0', sizeMb: 210,
       tagline: L('Garçons contre filles, le chat décide.', 'Boys vs girls, the chat decides.', 'Chicos contra chicas, el chat decide.', 'ชายปะทะหญิง แชตเป็นผู้ตัดสิน', 'Lelaki lawan perempuan, sembang yang menentukan.'),
       description: L('Plusieurs modes de duel entre les deux camps.', 'Several duel modes between the two sides.', 'Varios modos de duelo entre los dos bandos.', 'หลายโหมดดวลกันระหว่างสองฝ่าย', 'Beberapa mod duel antara kedua-dua pihak.') }
   ];
@@ -111,7 +111,7 @@
     checkout: () => R({ url: null }),
     promoCheck: (code, product) => {
       if (String(code).toUpperCase() !== 'BIENVENUE20') return Promise.resolve({ ok: false, error: { code: 'promo_unknown', message: 'Code inconnu' } });
-      const o = product === 'pass_monthly' ? 30 : product === 'pass_yearly' ? 240 : 40;
+      const o = product === 'pass_monthly' ? 12.99 : product === 'pass_yearly' ? 99 : 20;
       return R({ ok: true, code: 'BIENVENUE20', label: '-20 %', product, originalPrice: o, finalPrice: o * 0.8, free: false, firstPaymentOnly: product !== 'game', regularPrice: o });
     },
     billingPortal: () => R({ url: null }),

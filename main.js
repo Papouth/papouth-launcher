@@ -269,7 +269,7 @@ handle('store:libraryAdd', async (slug) => {
   return api.libraryAdd(slug);
 });
 // Prix recalculé par le serveur ; en démo, un seul code d'exemple.
-const DEMO_PRICES = { pass_monthly: 30, pass_yearly: 240 };
+const DEMO_PRICES = { pass_monthly: 12.99, pass_yearly: 99 };
 handle('store:promoCheck', async ({ code, product, slug }) => {
   const c = String(code || '').trim().toUpperCase();
   if (!/^[A-Z0-9_-]{3,30}$/.test(c)) throw new ApiError('promo_unknown', 'Code inconnu.');
@@ -278,7 +278,7 @@ handle('store:promoCheck', async ({ code, product, slug }) => {
   if (demoMode) {
     if (c !== 'BIENVENUE20') throw new ApiError('promo_unknown', 'Code inconnu.');
     const g = product === 'game' ? (catalogCache || []).find((x) => x.slug === slug) : null;
-    const original = product === 'game' ? Number((g && g.price) || 40) : DEMO_PRICES[product];
+    const original = product === 'game' ? Number((g && g.price) || 20) : DEMO_PRICES[product];
     const final = Math.round(original * 80) / 100;
     return { ok: true, code: c, label: '-20 %', product, originalPrice: original, finalPrice: final, free: false };
   }
