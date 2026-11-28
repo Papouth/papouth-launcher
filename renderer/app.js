@@ -193,17 +193,45 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
 
   // ----- Cartes de jeux -----
   const tagOf = (g, state) => (isFree(g) ? t('tag.free') : state === 'locked' ? t('tag.notOwned') : isOwned(g) ? t('tag.lifetime') : t('tag.pass'));
+  // ----- Aperçus vidéo des jeux : previews/<slug>.mp4 listés dans le manifeste du site (facultatif) -----
+  const PV_BASE = 'https://papouth.dupas.pro/', PV_MAX = 6;
+  let pvMan = null, pvIo = null;
+  const pvVis = new Set();
+  const pvManifest = () => pvMan || (pvMan = fetch(PV_BASE + 'previews/previews.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+  const pvStop = (v) => { v.pause(); if (v.getAttribute('src')) { v.removeAttribute('src'); v.load(); } };
+  function pvSync() {
+    let n = 0;
+    pvVis.forEach((v) => {
+      if (v.isConnected && n < PV_MAX) { n++; if (!v.getAttribute('src')) v.src = v.dataset.src; const p = v.play(); if (p && p.catch) p.catch(() => {}); } else pvStop(v);
+    });
+  }
+  function pvAttach(cover, slug) {
+    const c = navigator.connection;
+    if (!window.IntersectionObserver || !window.fetch || reducedMotion() || (c && c.saveData)) return;
+    pvManifest().then((m) => {
+      const u = m && typeof m === 'object' ? m[slug] : '';
+      if (typeof u !== 'string' || !/^previews\/[\w.-]+\.mp4(\?v=[\w.-]+)?$/.test(u) || !cover.isConnected) return;
+      const v = h('video', { class: 'pv', muted: '', loop: '', playsinline: '', preload: 'none', disablepictureinpicture: '', 'aria-hidden': 'true', tabindex: '-1', 'data-src': PV_BASE + u });
+      v.muted = true; v.loop = true; v.playsInline = true;
+      v.addEventListener('error', () => { pvVis.delete(v); if (pvIo) pvIo.unobserve(v); v.remove(); });
+      cover.prepend(v);
+      pvIo = pvIo || new IntersectionObserver((es) => { es.forEach((e) => { if (e.isIntersecting) pvVis.add(e.target); else { pvVis.delete(e.target); pvStop(e.target); } }); pvSync(); }, { threshold: 0.5 });
+      pvIo.observe(v);
+    });
+  }
   function gameCard(g, ctx) {
     const state = gameState(g);
     const actions = actionsFor(g, ctx);
     const inst = S.installed[g.slug];
     const bg = g.image ? 'url("' + g.image.replace(/["\\()]/g, '') + '")' : 'none';
     const accKey = { 'paintball-master': 'pink', 'pop-riot': 'yellow', 'boys-girls-ultimate': 'blue' }[g.slug];
+    const cover = h('div', { class: 'cover', style: 'background-image:' + bg },
+      g.image ? null : h('span', { class: 'cname' }, g.name),
+      isSoftware(g) ? h('span', { class: 'kind badge' }, t('tag.software')) : null,
+      h('span', { class: 'tag badge' }, tagOf(g, state)));
+    pvAttach(cover, g.slug);
     return h('article', { class: 'game clickable', tabindex: '0', role: 'link', 'aria-label': t('card.view', { name: g.name }), onclick: (ev) => { if (!ev.target.closest('button,a,input')) openSale(g.slug); }, onkeydown: (ev) => { if (ev.key === 'Enter' && ev.target === ev.currentTarget) openSale(g.slug); }, 'data-accent': accKey, style: '--ac-raw:' + (/^#[0-9a-f]{3,8}$/i.test(g.accent) ? g.accent : '#7A3CFF') },
-      h('div', { class: 'cover', style: 'background-image:' + bg },
-        g.image ? null : h('span', { class: 'cname' }, g.name),
-        isSoftware(g) ? h('span', { class: 'kind badge' }, t('tag.software')) : null,
-        h('span', { class: 'tag badge' }, tagOf(g, state))),
+      cover,
       h('div', { class: 'body' },
         h('div', { class: 'nm' }, g.name), h('div', { class: 'tg' }, g.tagline),
         h('div', { class: 'meta' }, 'v' + g.version + (g.sizeMb ? ' · ' + t('card.size', { size: window.I18N.num(g.sizeMb) }) : '') + (inst ? ' · ' + t('card.installed', { version: inst.version }) : '')),
